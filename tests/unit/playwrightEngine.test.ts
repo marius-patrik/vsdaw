@@ -241,6 +241,9 @@ describe("PlaywrightEngineManager", () => {
     const manualMessages: unknown[] = [];
     transport.onDidReceiveMessage((m) => manualMessages.push(m));
 
+    // Give healthCheck a tick to subscribe before simulating the pong response.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
     receive({
       projectId: "project-1",
       direction: "engine-to-host",

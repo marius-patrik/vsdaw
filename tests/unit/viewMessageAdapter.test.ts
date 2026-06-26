@@ -58,14 +58,14 @@ describe("viewMessageAdapter", () => {
       expect(result.payload).toEqual({ numerator: 3, denominator: 4 });
     });
 
-    test("transport/seek -> transport.seek", () => {
+    test("transport/seek -> transport.seek (beats to PPQN)", () => {
       const result = adaptViewMessage(PROJECT_ID, {
         type: "transport/seek",
         beats: 16,
       });
       expectEnvelope(result);
       expect(result.type).toBe(MessageType.TransportSeek);
-      expect(result.payload).toEqual({ position: 16, unit: "bars" });
+      expect(result.payload).toEqual({ position: 16 * 960, unit: "ppqn" });
     });
   });
 

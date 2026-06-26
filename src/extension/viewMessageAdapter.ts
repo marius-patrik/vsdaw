@@ -65,9 +65,11 @@ export function adaptViewMessage(
       return { ...base, type: MessageType.TransportSetTimeSignature, payload };
     }
     case "transport/seek": {
+      // The timeline works in beats; the engine's transport seek uses PPQN
+      // ticks when the unit is "ppqn".
       const payload: TransportSeekPayload = {
-        position: message.beats,
-        unit: "bars",
+        position: message.beats * 960,
+        unit: "ppqn",
       };
       return { ...base, type: MessageType.TransportSeek, payload };
     }

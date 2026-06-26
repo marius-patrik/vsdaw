@@ -320,6 +320,12 @@ export class MessageRouter implements vscode.Disposable {
     }
 
     const viewMessage = raw as ViewMessage;
+
+    // Lifecycle/UI-only messages are not forwarded to the engine.
+    if (viewMessage.type === "view/ready") {
+      return;
+    }
+
     const envelope = adaptViewMessage(projectId, viewMessage);
     if (!envelope) {
       const reason = `unsupported view message type: ${viewMessage.type}`;

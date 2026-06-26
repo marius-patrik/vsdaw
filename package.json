@@ -31,6 +31,7 @@
     "onCommand:vsdaw.showGraph",
     "onCommand:vsdaw.export",
     "onCommand:vsdaw.settings",
+    "onCommand:vsdaw.engineHealth",
     "onCustomEditor:vsdaw.editor"
   ],
   "contributes": {
@@ -83,6 +84,11 @@
       {
         "command": "vsdaw.showEngineMenu",
         "title": "Show Engine Menu",
+        "category": "VSDAW"
+      },
+      {
+        "command": "vsdaw.engineHealth",
+        "title": "Check Engine Health",
         "category": "VSDAW"
       }
     ],

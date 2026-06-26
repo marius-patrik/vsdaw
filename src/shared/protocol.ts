@@ -83,6 +83,9 @@ export enum MessageType {
   EngineReady = "ready",
   EngineError = "error",
 
+  Ping = "ping",
+  Pong = "pong",
+
   ProjectNew = "project.new",
   ProjectLoad = "project.load",
   ProjectSave = "project.save",

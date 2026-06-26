@@ -172,6 +172,11 @@ async function onHostMessage(event: MessageEvent<unknown> | Message<unknown>) {
     `received ${message.type}${message.requestId ? ` requestId=${message.requestId}` : ""}`,
   );
 
+  if (message.type === MessageType.Ping) {
+    post(MessageType.Pong, { time: Date.now() }, message.requestId);
+    return;
+  }
+
   if (!controller) {
     post(
       MessageType.EngineError,

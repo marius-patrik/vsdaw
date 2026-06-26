@@ -134,6 +134,19 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     void vscode.commands.executeCommand("workbench.action.openSettings", "vsdaw");
   });
 
+  register("vsdaw.engineHealth", async () => {
+    const projectId = getActiveProjectId(projectManager);
+    if (!projectId) return;
+
+    const origin = projectManager.getServerOrigin();
+    if (!origin) {
+      throw new Error("Engine server is not running");
+    }
+
+    const result = await deps.engineManager.healthCheck(projectId, origin);
+    vscode.window.showInformationMessage(`VSDAW engine is healthy (${result.elapsedMs}ms).`);
+  });
+
   register("vsdaw.showEngineMenu", async () => {
     const { engineManager } = deps;
     const running = engineManager.isRunning;
@@ -147,6 +160,10 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
       {
         label: "$(debug-restart) Restart Engine",
         description: "Restart the background Chrome audio engine",
+      },
+      {
+        label: "$(pulse) Engine Health",
+        description: "Ping the audio engine and show response time",
       },
       { label: "$(output) Show Output", description: "Open the VSDAW output channel" },
       { label: "$(gear) Open Settings", description: "Open VSDAW settings" },
@@ -164,6 +181,8 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     } else if (picked.label.includes("Restart Engine")) {
       await engineManager.stop();
       await engineManager.start();
+    } else if (picked.label.includes("Engine Health")) {
+      await vscode.commands.executeCommand("vsdaw.engineHealth");
     } else if (picked.label.includes("Show Output")) {
       outputChannel.show();
     } else if (picked.label.includes("Open Settings")) {

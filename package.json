@@ -24,6 +24,8 @@
   "activationEvents": [
     "onCommand:vsdaw.newProject",
     "onCommand:vsdaw.openProject",
+    "onCommand:vsdaw.undo",
+    "onCommand:vsdaw.redo",
     "onCommand:vsdaw.showTimeline",
     "onCommand:vsdaw.showMixer",
     "onCommand:vsdaw.showPianoRoll",
@@ -44,6 +46,16 @@
       {
         "command": "vsdaw.openProject",
         "title": "Open Project",
+        "category": "VSDAW"
+      },
+      {
+        "command": "vsdaw.undo",
+        "title": "Undo",
+        "category": "VSDAW"
+      },
+      {
+        "command": "vsdaw.redo",
+        "title": "Redo",
         "category": "VSDAW"
       },
       {
@@ -93,6 +105,18 @@
       }
     ],
     "keybindings": [
+      {
+        "command": "vsdaw.undo",
+        "key": "ctrl+z",
+        "mac": "cmd+z",
+        "when": "editorFocus || webviewPanelFocus"
+      },
+      {
+        "command": "vsdaw.redo",
+        "key": "ctrl+shift+z",
+        "mac": "cmd+shift+z",
+        "when": "editorFocus || webviewPanelFocus"
+      },
       {
         "command": "vsdaw.showMixer",
         "key": "ctrl+shift+m",

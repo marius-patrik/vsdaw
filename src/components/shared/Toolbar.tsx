@@ -1,5 +1,14 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Download, LayoutGrid, MoreHorizontal, Plus, Save, Settings } from "lucide-react";
+import {
+  Download,
+  LayoutGrid,
+  MoreHorizontal,
+  Plus,
+  Redo2,
+  Save,
+  Settings,
+  Undo2,
+} from "lucide-react";
 import * as React from "react";
 import type { TimePosition, TimeSignature, ViewName } from "../../views/shared/types.js";
 import { TimeDisplay } from "../transport/TimeDisplay.js";
@@ -27,6 +36,8 @@ export interface ToolbarProps {
   onSetTimeSignature: (timeSignature: TimeSignature) => void;
   onShowView: (view: ViewName) => void;
   onAddTrack?: (trackType: "audio" | "midi" | "bus") => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
   onSettings: () => void;
   onExport: () => void;
 }
@@ -52,6 +63,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSetTimeSignature,
   onShowView,
   onAddTrack,
+  onUndo,
+  onRedo,
   onSettings,
   onExport,
 }) => {
@@ -144,6 +157,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
               }}
             >
+              {onUndo && (
+                <OverflowItem
+                  icon={<Undo2 size={14} />}
+                  label="Undo"
+                  onClick={() => {
+                    setShowOverflow(false);
+                    onUndo();
+                  }}
+                />
+              )}
+              {onRedo && (
+                <OverflowItem
+                  icon={<Redo2 size={14} />}
+                  label="Redo"
+                  onClick={() => {
+                    setShowOverflow(false);
+                    onRedo();
+                  }}
+                />
+              )}
               <OverflowItem
                 icon={<LayoutGrid size={14} />}
                 label="Show timeline"

@@ -14,8 +14,10 @@ import {
   type ProjectNewPayload,
   type ProjectState,
   type StateSetPayload,
+  type TrackCreatePayload,
+  type TrackType,
 } from "../shared/protocol.js";
-import type { ProjectJson } from "../shared/schemas.js";
+import type { ProjectJson, Region, Track } from "../shared/schemas.js";
 import { acquireServer, releaseServer } from "./audioServer.js";
 import type { MessageRouter } from "./messageRouter.js";
 import type { PlaywrightEngineManager } from "./playwrightEngine.js";
@@ -168,6 +170,7 @@ export class ProjectManager implements vscode.Disposable {
         engineDisposables: [engineTransport, engineDisposable],
         undoManager: new UndoManager<Uint8Array>({ limit: 100 }),
         audioFiles: new Map(),
+        regionAudioFiles: new Map(),
       };
 
       session.views.set("vsdaw.editor", timelinePanel);
@@ -432,7 +435,7 @@ export class ProjectManager implements vscode.Disposable {
       }
 
       const engineBin = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
-      const projectJson = this.buildProjectJsonForSave(session, targetUri);
+      const projectJson = await this.buildProjectJsonForSave(session, targetUri);
       const bundle = await writeBundle(projectJson, session.audioFiles, engineBin);
       await this.writeProjectBytes(targetUri, bundle);
       session.projectJson = projectJson;
@@ -766,7 +769,7 @@ export class ProjectManager implements vscode.Disposable {
       const bytes = response.payload as Uint8Array | ArrayBuffer | undefined;
       if (!bytes) return;
       const engineBin = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
-      const projectJson = this.buildProjectJsonForSave(session, session.uri);
+      const projectJson = await this.buildProjectJsonForSave(session, session.uri);
       const bundle = await writeBundle(projectJson, session.audioFiles, engineBin);
       await fs.writeFile(recoveryPath, bundle);
 
@@ -905,14 +908,47 @@ export class ProjectManager implements vscode.Disposable {
     }
   }
 
-  private buildProjectJsonForSave(session: ProjectSession, targetUri: vscode.Uri): ProjectJson {
+  private async buildProjectJsonForSave(
+    session: ProjectSession,
+    targetUri: vscode.Uri,
+  ): Promise<ProjectJson> {
     const base = session.projectJson ?? createEmptyProject("Untitled", 48000);
+    const state = await this.getProjectState(session.projectId);
+
+    const tracks: Track[] = state.tracks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      type: t.type,
+      color: t.color ?? defaultTrackColorHex(t.index),
+      volumeDb: t.volumeDb,
+      pan: t.pan,
+      mute: t.mute,
+      solo: t.solo,
+      arm: t.arm,
+      inserts: t.inserts,
+    }));
+
+    const regions: Region[] = state.regions.map((r) => ({
+      id: r.id,
+      trackId: r.trackId,
+      audioFile: r.type === "audio" ? session.regionAudioFiles.get(r.id) : undefined,
+      start: r.position,
+      duration: r.duration,
+      offset: r.offset ?? 0,
+      fadeIn: { type: "linear", duration: normalizeFadeValue(r.fadeIn) },
+      fadeOut: { type: "linear", duration: normalizeFadeValue(r.fadeOut) },
+    }));
+
     return {
       ...base,
       project: {
         ...base.project,
         name: path.basename(targetUri.fsPath, ".vsdaw"),
+        tempo: state.transport.bpm,
+        timeSignature: state.transport.timeSignature,
       },
+      tracks,
+      regions,
     };
   }
 
@@ -944,7 +980,7 @@ export class ProjectManager implements vscode.Disposable {
 
     const targetTrackId = trackId ?? (await this.createTrack(projectId, "audio"));
 
-    await this.router.requestEngine(
+    const regionResponse = await this.router.requestEngine(
       projectId,
       MessageType.RegionCreateAudio,
       {
@@ -956,6 +992,10 @@ export class ProjectManager implements vscode.Disposable {
       },
       { responseType: `${MessageType.RegionCreateAudio}.ack`, timeoutMs: 30000 },
     );
+    const regionId = (regionResponse.payload as { regionId: string }).regionId;
+    if (regionId) {
+      session.regionAudioFiles.set(regionId, audioFileId);
+    }
 
     this.markDirty(projectId);
   }
@@ -1020,11 +1060,100 @@ export class ProjectManager implements vscode.Disposable {
     this.markDirty(projectId);
   }
 
-  private async createTrack(projectId: string, type: "audio" | "midi"): Promise<string> {
+  async setTrackMute(projectId: string, trackId: string, value: boolean): Promise<void> {
+    const session = this.sessions.get(projectId);
+    if (!session) {
+      throw new Error(`No session for project ${projectId}`);
+    }
+    await this.router.requestEngine(
+      projectId,
+      MessageType.TrackSetMute,
+      { trackId, value },
+      { responseType: `${MessageType.TrackSetMute}.ack`, timeoutMs: 30000 },
+    );
+    this.markDirty(projectId);
+  }
+
+  async setTrackSolo(projectId: string, trackId: string, value: boolean): Promise<void> {
+    const session = this.sessions.get(projectId);
+    if (!session) {
+      throw new Error(`No session for project ${projectId}`);
+    }
+    await this.router.requestEngine(
+      projectId,
+      MessageType.TrackSetSolo,
+      { trackId, value },
+      { responseType: `${MessageType.TrackSetSolo}.ack`, timeoutMs: 30000 },
+    );
+    this.markDirty(projectId);
+  }
+
+  async createMidiRegion(
+    projectId: string,
+    options: {
+      trackId?: string;
+      position?: number;
+      duration?: number;
+      name?: string;
+    } = {},
+  ): Promise<string> {
+    const session = this.sessions.get(projectId);
+    if (!session) {
+      throw new Error(`No session for project ${projectId}`);
+    }
+
+    const trackId = options.trackId ?? (await this.createTrack(projectId, "midi"));
+    const response = await this.router.requestEngine(
+      projectId,
+      MessageType.RegionCreateMidi,
+      {
+        trackId,
+        position: options.position ?? 0,
+        duration: options.duration ?? 960 * 4,
+        name: options.name ?? "MIDI Region",
+      },
+      { responseType: `${MessageType.RegionCreateMidi}.ack`, timeoutMs: 30000 },
+    );
+    const regionId = (response.payload as { regionId: string }).regionId;
+    if (!regionId) {
+      throw new Error("MIDI region creation failed");
+    }
+    this.markDirty(projectId);
+    return regionId;
+  }
+
+  async getProjectState(projectId: string): Promise<ProjectState> {
+    const session = this.sessions.get(projectId);
+    if (!session) {
+      throw new Error(`No session for project ${projectId}`);
+    }
+    const response = await this.router.requestEngine(projectId, MessageType.StateGet, undefined, {
+      responseType: `${MessageType.StateGet}.result`,
+      timeoutMs: 10000,
+    });
+    return response.payload as ProjectState;
+  }
+
+  async saveActiveProject(): Promise<void> {
+    const projectId = this.activeProjectId;
+    if (!projectId) {
+      throw new Error("No active VSDAW project");
+    }
+    await this.saveProject(projectId);
+  }
+
+  async createTrack(
+    projectId: string,
+    type: TrackType,
+    name?: string,
+    index?: number,
+    color?: string,
+  ): Promise<string> {
+    const defaultName = type === "audio" ? "Audio Track" : type === "midi" ? "MIDI Track" : "Bus";
     const response = await this.router.requestEngine(
       projectId,
       MessageType.TrackCreate,
-      { type, name: type === "audio" ? "Audio Track" : "MIDI Track" },
+      { type, name: name ?? defaultName, index, color } satisfies TrackCreatePayload,
       { responseType: `${MessageType.TrackCreate}.ack`, timeoutMs: 30000 },
     );
     const trackId = (response.payload as { trackId: string }).trackId;
@@ -1170,6 +1299,27 @@ const MUTABLE_MESSAGE_TYPES = new Set<string>([
 
 function isMutableMessage(message: MessageEnvelope): boolean {
   return MUTABLE_MESSAGE_TYPES.has(message.type);
+}
+
+function defaultTrackColorHex(index: number): string {
+  const colors = [
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ef4444",
+    "#06b6d4",
+    "#f97316",
+    "#84cc16",
+  ];
+  return colors[index % colors.length];
+}
+
+function normalizeFadeValue(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.round(value);
+  }
+  return 0;
 }
 
 export async function writeEmptyProject(uri: vscode.Uri): Promise<void> {

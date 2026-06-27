@@ -9,10 +9,13 @@ const outdir = path.join(root, "out", "tests", "integration");
 
 fs.mkdirSync(outdir, { recursive: true });
 
-const entries = ["extension.test.ts", "smoke.test.ts"].map((name) => ({
-  in: path.join(root, "tests", "integration", name),
-  out: path.basename(name, ".ts"),
-}));
+const entries = fs
+  .readdirSync(path.join(root, "tests", "integration"))
+  .filter((name) => name.endsWith(".test.ts"))
+  .map((name) => ({
+    in: path.join(root, "tests", "integration", name),
+    out: path.basename(name, ".ts"),
+  }));
 
 /** @type {esbuild.BuildOptions} */
 const config = {

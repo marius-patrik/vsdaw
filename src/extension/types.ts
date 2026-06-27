@@ -22,6 +22,8 @@ export interface ProjectSession {
   engineDisposables?: vscode.Disposable[];
   undoManager?: UndoManager<Uint8Array>;
   audioFiles: Map<string, Uint8Array>;
+  /** Maps region id -> audio file id for audio regions. */
+  regionAudioFiles: Map<string, string>;
 }
 
 export interface PendingRequest {

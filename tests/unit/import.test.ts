@@ -44,6 +44,7 @@ interface TestSession {
   isUntitled: boolean;
   projectJson?: unknown;
   audioFiles: Map<string, Uint8Array>;
+  regionAudioFiles: Map<string, string>;
 }
 
 function getSession(manager: ProjectManager): TestSession {
@@ -90,6 +91,7 @@ function createProjectManager(router: ReturnType<typeof createMockRouter>): Proj
     isUntitled: false,
     projectJson: undefined,
     audioFiles: new Map(),
+    regionAudioFiles: new Map(),
   });
   (manager as unknown as { activeProjectId: string }).activeProjectId = PROJECT_ID;
 
@@ -242,6 +244,7 @@ describe("ProjectManager import", () => {
     );
 
     expect(session.isDirty).toBe(true);
+    expect(session.regionAudioFiles.get(REGION_ID)).toBe("audio/loop.wav");
   });
 
   test("importAudio uses provided trackId without creating a new track", async () => {

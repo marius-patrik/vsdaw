@@ -126,7 +126,12 @@ async function boot() {
     // Create a default empty project so the engine is immediately usable.
     controller.newProject();
 
-    setStatus("Resuming AudioContext on first user gesture...");
+    setStatus("Resuming AudioContext...");
+    try {
+      await audioContext.resume();
+    } catch (error: unknown) {
+      console.warn("Could not resume AudioContext during boot:", error);
+    }
     resumeOnUserGesture(audioContext);
 
     setStatus("Ready.");

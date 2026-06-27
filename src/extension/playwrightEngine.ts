@@ -143,6 +143,7 @@ export class PlaywrightEngineManager implements vscode.Disposable {
           "--disable-dev-shm-usage",
           "--disable-background-timer-throttling",
           "--disable-renderer-backgrounding",
+          "--autoplay-policy=no-user-gesture-required",
           "--window-size=1280,720",
         ],
       });

@@ -28,6 +28,7 @@ import {
   type TrackCreatePayload,
   type TrackIdPayload,
   type TrackInsertPayload,
+  type TrackInputDevicePayload,
   type TrackNamePayload,
   type TrackOutputPayload,
   type TrackPanPayload,
@@ -301,6 +302,13 @@ export function adaptViewMessage(
         amount: message.amount,
       };
       return { ...base, type: MessageType.TrackSetSendAmount, payload };
+    }
+    case "track/setInputDevice": {
+      const payload: TrackInputDevicePayload = {
+        trackId: message.trackId,
+        inputDeviceId: message.inputDeviceId,
+      };
+      return { ...base, type: MessageType.TrackSetInputDevice, payload };
     }
 
     // Unsupported: lifecycle, UI-only, or state-dependent toggles.

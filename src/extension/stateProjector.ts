@@ -264,6 +264,7 @@ export class ProjectStateProjector {
         points: automationPoints.filter((point) => point.laneId === lane.id),
       })),
       outputTrackId: track.outputTrackId ?? null,
+      inputDeviceId: track.inputDeviceId,
       sends: track.sends.map((send) => ({
         id: send.id,
         targetTrackId: send.targetTrackId,

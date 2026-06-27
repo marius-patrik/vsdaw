@@ -92,6 +92,7 @@ export class ProjectController {
   private trackTypes = new Map<string, ApiTrackType>();
   private trackOutputs = new Map<string, string | null>();
   private trackSends = new Map<string, SendState[]>();
+  private trackInputDevices = new Map<string, string>();
   private takeRegions = new Map<string, AnyRegionBoxAdapter[]>();
   private automationLanes = new Map<string, AutomationLaneState>();
   private automationPoints = new Map<string, AutomationPointState>();
@@ -218,6 +219,7 @@ export class ProjectController {
     this.trackTypes.clear();
     this.trackOutputs.clear();
     this.trackSends.clear();
+    this.trackInputDevices.clear();
     this.takeRegions.clear();
     this.automationLanes.clear();
     this.automationPoints.clear();
@@ -405,6 +407,11 @@ export class ProjectController {
 
   setTrackOutput(trackId: string, outputTrackId: string | null) {
     this.trackOutputs.set(trackId, outputTrackId);
+    this.broadcastState();
+  }
+
+  setTrackInputDevice(trackId: string, inputDeviceId: string) {
+    this.trackInputDevices.set(trackId, inputDeviceId);
     this.broadcastState();
   }
 
@@ -1212,6 +1219,7 @@ export class ProjectController {
         arm: capture.mapOr((c) => c.armed.getValue(), false),
         inserts,
         outputTrackId: this.trackOutputs.get(trackId) ?? null,
+        inputDeviceId: this.trackInputDevices.get(trackId),
         sends: this.trackSends.get(trackId) ?? [],
       });
 

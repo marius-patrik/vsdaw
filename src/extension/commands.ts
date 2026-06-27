@@ -1,6 +1,7 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import type { TrackType } from "../shared/protocol.js";
 import type { PlaywrightEngineManager } from "./playwrightEngine.js";
 import type { ProjectManager } from "./projectManager.js";
 import type {
@@ -25,11 +26,14 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
   const outputChannel = projectManager.outputChannel;
   const disposables: vscode.Disposable[] = [];
 
-  const register = (command: string, handler: () => Promise<void> | void) => {
+  const register = <T = unknown>(
+    command: string,
+    handler: (arg?: T) => Promise<unknown> | unknown,
+  ) => {
     disposables.push(
-      vscode.commands.registerCommand(command, async () => {
+      vscode.commands.registerCommand(command, async (arg?: T) => {
         try {
-          await handler();
+          return await handler(arg);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           outputChannel.appendLine(`[command:${command}] error: ${message}`);
@@ -43,6 +47,51 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
 
   register("vsdaw.newProject", () => projectManager.newProject());
   register("vsdaw.openProject", () => projectManager.openProject());
+
+  register<{ type: TrackType; name?: string; index?: number; color?: string }>(
+    "vsdaw.createTrack",
+    async (args) => {
+      const projectId = getActiveProjectId(projectManager);
+      if (!projectId) return;
+      const type =
+        args?.type ??
+        (await vscode.window.showQuickPick(["audio", "midi", "bus"], {
+          placeHolder: "Select track type",
+        }));
+      if (!type) return;
+      const name = args?.name ?? (await vscode.window.showInputBox({ prompt: "Track name" }));
+      return projectManager.createTrack(projectId, type as TrackType, name ?? undefined);
+    },
+  );
+
+  register<{ trackId: string; value: boolean }>("vsdaw.setTrackMute", async (args) => {
+    const projectId = getActiveProjectId(projectManager);
+    if (!projectId || args?.trackId == null || args?.value == null) return;
+    return projectManager.setTrackMute(projectId, args.trackId, args.value);
+  });
+
+  register<{ trackId: string; value: boolean }>("vsdaw.setTrackSolo", async (args) => {
+    const projectId = getActiveProjectId(projectManager);
+    if (!projectId || args?.trackId == null || args?.value == null) return;
+    return projectManager.setTrackSolo(projectId, args.trackId, args.value);
+  });
+
+  register<{ trackId?: string; position?: number; duration?: number; name?: string }>(
+    "vsdaw.createMidiRegion",
+    async (args) => {
+      const projectId = getActiveProjectId(projectManager);
+      if (!projectId) return;
+      return projectManager.createMidiRegion(projectId, args);
+    },
+  );
+
+  register("vsdaw.saveProject", () => projectManager.saveActiveProject());
+
+  register("vsdaw.getProjectState", async () => {
+    const projectId = getActiveProjectId(projectManager);
+    if (!projectId) return undefined;
+    return projectManager.getProjectState(projectId);
+  });
 
   register("vsdaw.undo", () => {
     const projectId = getActiveProjectId(projectManager);

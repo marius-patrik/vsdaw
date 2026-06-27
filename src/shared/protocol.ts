@@ -145,6 +145,8 @@ export enum MessageType {
 
   PeaksGet = "peaks.get",
 
+  AudioImport = "audio.import",
+
   ExportRender = "export.render",
 
   StateGet = "state.get",
@@ -384,6 +386,12 @@ export interface PeaksGetPayload {
   sampleId: string;
   width: number;
   channel?: number;
+}
+
+export interface AudioImportPayload {
+  data: string;
+  name?: string;
+  bpm?: number;
 }
 
 export interface ExportRenderPayload {

@@ -1,4 +1,5 @@
 import {
+  type AudioImportPayload,
   type DeviceCreatePayload,
   type DeviceIdPayload,
   type DeviceListPayload,
@@ -488,6 +489,22 @@ function routeMessage(
         return { type: "error", message: "deviceId is required" };
       }
       return { type: "ok", payload: controller.getDeviceParameters(opts.deviceId) };
+    }
+
+    // Audio import
+    case MessageType.AudioImport: {
+      const opts = p as AudioImportPayload;
+      if (!opts?.data) {
+        return { type: "error", message: "Audio data is required" };
+      }
+      const binary = base64ToArrayBuffer(opts.data);
+      return controller
+        .importAudioFile(binary, opts.name)
+        .then((result) => ({ type: "ok" as const, payload: result }))
+        .catch((error: unknown) => ({
+          type: "error" as const,
+          message: error instanceof Error ? error.message : String(error),
+        }));
     }
 
     // Peaks

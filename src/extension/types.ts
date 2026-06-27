@@ -21,6 +21,7 @@ export interface ProjectSession {
   lastSnapshot?: unknown;
   engineDisposables?: vscode.Disposable[];
   undoManager?: UndoManager<Uint8Array>;
+  audioFiles: Map<string, Uint8Array>;
 }
 
 export interface PendingRequest {

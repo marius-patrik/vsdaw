@@ -1,4 +1,4 @@
-import type * as vscode from "vscode";
+import * as vscode from "vscode";
 import { MessageSchema, MessageType } from "../shared/protocol.js";
 import type { HostMessage, ViewMessage } from "../views/shared/types.js";
 import type { EngineTransport } from "./engineTransport.js";
@@ -366,6 +366,40 @@ export class MessageRouter implements vscode.Disposable {
         direction: "view-to-host",
         type: viewMessage.type,
       });
+      return;
+    }
+
+    if (viewMessage.type === "device/getParameters") {
+      void this.requestEngine(projectId, MessageType.DeviceGetParameters, {
+        deviceId: viewMessage.deviceId,
+      })
+        .then((response) => {
+          this.broadcastToViews(projectId, {
+            type: "host/deviceParameters",
+            deviceId: viewMessage.deviceId,
+            parameters: response.payload as {
+              name: string;
+              value: number | boolean;
+              min: number;
+              max: number;
+              type: "number" | "boolean";
+            }[],
+          });
+        })
+        .catch((error: unknown) => {
+          const text = error instanceof Error ? error.message : String(error);
+          this.routeErrorToViews(projectId, text);
+        });
+      return;
+    }
+
+    if (viewMessage.type === "command/importAudio") {
+      void vscode.commands.executeCommand("vsdaw.importAudio");
+      return;
+    }
+
+    if (viewMessage.type === "command/importMidi") {
+      void vscode.commands.executeCommand("vsdaw.importMidi");
       return;
     }
 

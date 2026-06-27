@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AUTOMATION_LANE_HEIGHT } from "../../shared/automation.js";
 import type { TrackState } from "../../views/shared/types.js";
 
 const BEAT_WIDTH = 40;
@@ -15,6 +16,9 @@ export interface TimelineCanvasProps {
   onSeek: (beats: number) => void;
   onSelectRegion: (regionId: string | null) => void;
   onMoveRegion: (regionId: string, start: number) => void;
+  onAddAutomationPoint?: (laneId: string, position: number, value: number) => void;
+  onMoveAutomationPoint?: (pointId: string, position: number, value: number) => void;
+  onDeleteAutomationPoint?: (pointId: string) => void;
 }
 
 interface CanvasSize {
@@ -62,6 +66,9 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   onSeek,
   onSelectRegion,
   onMoveRegion,
+  onAddAutomationPoint,
+  onMoveAutomationPoint,
+  onDeleteAutomationPoint,
 }) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -70,15 +77,32 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   const [drag, setDrag] = React.useState<
     | { type: "seek"; startX: number }
     | { type: "region"; regionId: string; startBeats: number; startX: number }
+    | {
+        type: "automation";
+        pointId: string;
+        laneId: string;
+        startBeats: number;
+        startValue: number;
+        startX: number;
+        startY: number;
+      }
     | null
   >(null);
   const pendingMoveRef = React.useRef<{ regionId: string; start: number } | null>(null);
+  const [dragPoint, setDragPoint] = React.useState<{
+    pointId: string;
+    position: number;
+    value: number;
+  } | null>(null);
 
   const sizedTracks = React.useMemo(
     () =>
       tracks.map((t) => ({
         ...t,
-        height: Math.max(MIN_TRACK_HEIGHT, t.height || MIN_TRACK_HEIGHT),
+        height: Math.max(
+          MIN_TRACK_HEIGHT + (t.automationLanes?.length ?? 0) * AUTOMATION_LANE_HEIGHT,
+          t.height || MIN_TRACK_HEIGHT,
+        ),
       })),
     [tracks],
   );
@@ -87,6 +111,12 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     () => HEADER_HEIGHT + RULER_HEIGHT + sizedTracks.reduce((sum, t) => sum + t.height, 0),
     [sizedTracks],
   );
+
+  const regionHeightForTrack = (track: (typeof sizedTracks)[number]) =>
+    Math.max(
+      MIN_TRACK_HEIGHT - 8,
+      track.height - (track.automationLanes?.length ?? 0) * AUTOMATION_LANE_HEIGHT,
+    );
 
   const { width, height, dpr } = useCanvasSize(containerRef);
 
@@ -177,22 +207,78 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       ctx.lineTo(drawWidth, y + track.height);
       ctx.stroke();
 
+      const regionHeight = regionHeightForTrack(track);
       for (const region of track.regions) {
         const rx = region.start * beatWidth - scrollX;
         const rw = Math.max(4, region.duration * beatWidth);
         if (rx + rw < 0 || rx > drawWidth) continue;
         ctx.fillStyle = region.color || track.color;
         ctx.globalAlpha = 0.85;
-        ctx.fillRect(rx + 1, y + 4, rw - 2, track.height - 8);
+        ctx.fillRect(rx + 1, y + 4, rw - 2, regionHeight - 8);
         ctx.globalAlpha = 1;
         ctx.fillStyle = fg;
         ctx.save();
         ctx.beginPath();
-        ctx.rect(rx + 6, y + 4, Math.max(0, rw - 12), track.height - 8);
+        ctx.rect(rx + 6, y + 4, Math.max(0, rw - 12), regionHeight - 8);
         ctx.clip();
-        ctx.fillText(region.name, rx + 6, y + track.height / 2);
+        ctx.fillText(region.name, rx + 6, y + regionHeight / 2);
         ctx.restore();
       }
+
+      // Automation lanes
+      let laneY = y + regionHeight;
+      for (const lane of track.automationLanes ?? []) {
+        ctx.fillStyle = border;
+        ctx.globalAlpha = 0.05;
+        ctx.fillRect(0, laneY, drawWidth, AUTOMATION_LANE_HEIGHT);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = border;
+        ctx.beginPath();
+        ctx.moveTo(0, laneY + AUTOMATION_LANE_HEIGHT);
+        ctx.lineTo(drawWidth, laneY + AUTOMATION_LANE_HEIGHT);
+        ctx.stroke();
+
+        const centerY = laneY + AUTOMATION_LANE_HEIGHT / 2;
+        ctx.strokeStyle = track.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const displayPoints = dragPoint
+          ? lane.points.map((p) =>
+              p.id === dragPoint.pointId
+                ? { ...p, position: dragPoint.position, value: dragPoint.value }
+                : p,
+            )
+          : lane.points;
+        const sorted = [...displayPoints].sort((a, b) => a.position - b.position);
+        if (sorted.length === 0) {
+          ctx.moveTo(0, centerY);
+          ctx.lineTo(drawWidth, centerY);
+        } else {
+          for (let i = 0; i < sorted.length - 1; i++) {
+            const x0 = sorted[i].position * beatWidth - scrollX;
+            const y0 = laneY + AUTOMATION_LANE_HEIGHT - sorted[i].value * AUTOMATION_LANE_HEIGHT;
+            const x1 = sorted[i + 1].position * beatWidth - scrollX;
+            const y1 =
+              laneY + AUTOMATION_LANE_HEIGHT - sorted[i + 1].value * AUTOMATION_LANE_HEIGHT;
+            if (x1 < 0 || x0 > drawWidth) continue;
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+          }
+        }
+        ctx.stroke();
+
+        for (const point of sorted) {
+          const px = point.position * beatWidth - scrollX;
+          const py = laneY + AUTOMATION_LANE_HEIGHT - point.value * AUTOMATION_LANE_HEIGHT;
+          if (px < -4 || px > drawWidth + 4) continue;
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        laneY += AUTOMATION_LANE_HEIGHT;
+      }
+
       y += track.height;
     }
 
@@ -216,6 +302,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     dpr,
     totalHeight,
     timeSignatureNumerator,
+    dragPoint,
   ]);
 
   // Flush pending region move on mouse up (throttle bus traffic).
@@ -225,6 +312,56 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       pendingMoveRef.current = null;
     }
   }, [onMoveRegion]);
+
+  const findAutomationPoint = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left + scrollX;
+    const y = clientY - rect.top;
+    let trackY = HEADER_HEIGHT + RULER_HEIGHT;
+    for (const track of sizedTracks) {
+      const regionHeight = regionHeightForTrack(track);
+      let laneY = trackY + regionHeight;
+      for (const lane of track.automationLanes ?? []) {
+        if (y >= laneY && y < laneY + AUTOMATION_LANE_HEIGHT) {
+          for (const point of lane.points) {
+            const px = point.position * BEAT_WIDTH * scale;
+            const py = laneY + AUTOMATION_LANE_HEIGHT - point.value * AUTOMATION_LANE_HEIGHT;
+            const dx = x - px;
+            const dy = y - py;
+            if (dx * dx + dy * dy <= 36) {
+              return { point, lane, laneY };
+            }
+          }
+        }
+        laneY += AUTOMATION_LANE_HEIGHT;
+      }
+      trackY += track.height;
+    }
+    return undefined;
+  };
+
+  const findAutomationLaneAt = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left + scrollX;
+    const y = clientY - rect.top;
+    let trackY = HEADER_HEIGHT + RULER_HEIGHT;
+    for (const track of sizedTracks) {
+      const regionHeight = regionHeightForTrack(track);
+      let laneY = trackY + regionHeight;
+      for (const lane of track.automationLanes ?? []) {
+        if (y >= laneY && y < laneY + AUTOMATION_LANE_HEIGHT) {
+          return { lane, laneY, x };
+        }
+        laneY += AUTOMATION_LANE_HEIGHT;
+      }
+      trackY += track.height;
+    }
+    return undefined;
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -251,7 +388,8 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     // Hit-test regions
     let y = HEADER_HEIGHT + RULER_HEIGHT;
     for (const track of sizedTracks) {
-      if (e.clientY - rect.top >= y && e.clientY - rect.top < y + track.height) {
+      const regionHeight = regionHeightForTrack(track);
+      if (e.clientY - rect.top >= y && e.clientY - rect.top < y + regionHeight) {
         for (const region of track.regions) {
           const rx = region.start * BEAT_WIDTH * scale;
           const rw = Math.max(4, region.duration * BEAT_WIDTH * scale);
@@ -268,6 +406,38 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         }
       }
       y += track.height;
+    }
+
+    // Hit-test automation points
+    const hitPoint = findAutomationPoint(e.clientX, e.clientY);
+    if (hitPoint) {
+      const { point, lane, laneY } = hitPoint;
+      setDrag({
+        type: "automation",
+        pointId: point.id,
+        laneId: lane.id,
+        startBeats: point.position,
+        startValue: point.value,
+        startX: e.clientX,
+        startY: laneY + AUTOMATION_LANE_HEIGHT - point.value * AUTOMATION_LANE_HEIGHT,
+      });
+      return;
+    }
+
+    // Click on automation lane adds a point
+    const hitLane = findAutomationLaneAt(e.clientX, e.clientY);
+    if (hitLane) {
+      const { lane, laneY, x: localX } = hitLane;
+      const position = Math.max(0, localX / (BEAT_WIDTH * scale));
+      const value = Math.max(
+        0,
+        Math.min(
+          1,
+          (laneY + AUTOMATION_LANE_HEIGHT - e.clientY + rect.top) / AUTOMATION_LANE_HEIGHT,
+        ),
+      );
+      onAddAutomationPoint?.(lane.id, position, value);
+      return;
     }
 
     onSelectRegion(null);
@@ -291,12 +461,37 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         regionId: drag.regionId,
         start: Math.max(0, drag.startBeats + deltaBeats),
       };
+    } else if (drag.type === "automation") {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const deltaPixelsX = e.clientX - drag.startX;
+      const deltaPixelsY = e.clientY - rect.top - (drag.startY - rect.top);
+      const deltaBeats = deltaPixelsX / (BEAT_WIDTH * scale);
+      const deltaValue = -deltaPixelsY / AUTOMATION_LANE_HEIGHT;
+      setDragPoint({
+        pointId: drag.pointId,
+        position: Math.max(0, drag.startBeats + deltaBeats),
+        value: Math.max(0, Math.min(1, drag.startValue + deltaValue)),
+      });
     }
   };
 
   const handleMouseUp = () => {
     flushPendingMove();
+    if (drag?.type === "automation" && dragPoint) {
+      onMoveAutomationPoint?.(dragPoint.pointId, dragPoint.position, dragPoint.value);
+    }
+    setDragPoint(null);
     setDrag(null);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const hit = findAutomationPoint(e.clientX, e.clientY);
+    if (hit) {
+      onDeleteAutomationPoint?.(hit.point.id);
+    }
   };
 
   const emptyState = sizedTracks.length === 0 && (
@@ -332,6 +527,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onContextMenu={handleContextMenu}
         style={{
           display: "block",
           width: width > 0 ? width : "100%",

@@ -1,10 +1,11 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Mic, MoreHorizontal, Volume2, VolumeX } from "lucide-react";
+import { Mic, MoreHorizontal, SlidersHorizontal, Volume2, VolumeX } from "lucide-react";
 import * as React from "react";
-import type { TrackState } from "../../views/shared/types.js";
+import type { AutomationTarget, DeviceParameter, TrackState } from "../../views/shared/types.js";
 
 export interface TrackHeaderProps {
   track: TrackState;
+  deviceParametersById?: Record<string, DeviceParameter[]>;
   onMute: () => void;
   onSolo: () => void;
   onArm: () => void;
@@ -14,6 +15,9 @@ export interface TrackHeaderProps {
   onDelete?: () => void;
   onSetColor?: (color: string) => void;
   onAddInsert?: (deviceName: string) => void;
+  onAddAutomationLane?: (trackId: string, target: AutomationTarget) => void;
+  onRemoveAutomationLane?: (laneId: string) => void;
+  onGetDeviceParameters?: (deviceId: string) => void;
 }
 
 const TRACK_COLORS = [
@@ -31,6 +35,7 @@ const INSERT_DEVICES = ["Reverb", "Delay", "Chorus", "Compressor", "EQ"];
 
 export const TrackHeader: React.FC<TrackHeaderProps> = ({
   track,
+  deviceParametersById,
   onMute,
   onSolo,
   onArm,
@@ -40,6 +45,9 @@ export const TrackHeader: React.FC<TrackHeaderProps> = ({
   onDelete,
   onSetColor,
   onAddInsert,
+  onAddAutomationLane,
+  onRemoveAutomationLane,
+  onGetDeviceParameters,
 }) => {
   const [draftName, setDraftName] = React.useState(track.name);
 
@@ -115,6 +123,13 @@ export const TrackHeader: React.FC<TrackHeaderProps> = ({
           }}
         />
         <TrackMenuButton onDelete={onDelete} onSetColor={onSetColor} onAddInsert={onAddInsert} />
+        <TrackAutomationMenu
+          track={track}
+          deviceParametersById={deviceParametersById}
+          onAddLane={onAddAutomationLane}
+          onRemoveLane={onRemoveAutomationLane}
+          onGetDeviceParameters={onGetDeviceParameters}
+        />
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -378,6 +393,193 @@ const TrackMenuButton: React.FC<{
           >
             Delete Track
           </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+};
+
+const TrackAutomationMenu: React.FC<{
+  track: TrackState;
+  deviceParametersById?: Record<string, DeviceParameter[]>;
+  onAddLane?: (trackId: string, target: AutomationTarget) => void;
+  onRemoveLane?: (laneId: string) => void;
+  onGetDeviceParameters?: (deviceId: string) => void;
+}> = ({ track, deviceParametersById, onAddLane, onRemoveLane, onGetDeviceParameters }) => {
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    for (const insert of track.inserts) {
+      onGetDeviceParameters?.(insert.id);
+    }
+  }, [open, track.inserts, onGetDeviceParameters]);
+
+  const addLane = (target: AutomationTarget) => {
+    onAddLane?.(track.id, target);
+    setOpen(false);
+  };
+
+  return (
+    <DropdownMenu.Root open={open} onOpenChange={setOpen}>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          aria-label="Automation"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          style={{
+            width: 24,
+            height: 24,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid transparent",
+            borderRadius: 4,
+            backgroundColor:
+              track.automationLanes.length > 0 ? "var(--vsdaw-active-bg)" : "transparent",
+            color: track.automationLanes.length > 0 ? "var(--vsdaw-button-fg)" : "inherit",
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) => {
+            if (track.automationLanes.length === 0)
+              e.currentTarget.style.backgroundColor = "var(--vsdaw-hover-bg)";
+          }}
+          onMouseLeave={(e) => {
+            if (track.automationLanes.length === 0)
+              e.currentTarget.style.backgroundColor = "transparent";
+          }}
+        >
+          <SlidersHorizontal size={14} />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          side="bottom"
+          align="end"
+          sideOffset={4}
+          style={{
+            minWidth: 180,
+            borderRadius: 4,
+            padding: "4px 0",
+            backgroundColor: "var(--vsdaw-panel-bg)",
+            border: "1px solid var(--vsdaw-border)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+            zIndex: 100,
+          }}
+        >
+          <DropdownMenu.Sub>
+            <DropdownMenu.SubTrigger style={menuItemStyle}>Add Lane</DropdownMenu.SubTrigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.SubContent
+                sideOffset={2}
+                style={{
+                  minWidth: 160,
+                  borderRadius: 4,
+                  padding: "4px 0",
+                  backgroundColor: "var(--vsdaw-panel-bg)",
+                  border: "1px solid var(--vsdaw-border)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+                  zIndex: 100,
+                }}
+              >
+                <DropdownMenu.Item
+                  style={menuItemStyle}
+                  onClick={() => addLane({ type: "volume", trackId: track.id })}
+                >
+                  Volume
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  style={menuItemStyle}
+                  onClick={() => addLane({ type: "pan", trackId: track.id })}
+                >
+                  Pan
+                </DropdownMenu.Item>
+                {track.inserts.length > 0 && (
+                  <DropdownMenu.Sub>
+                    <DropdownMenu.SubTrigger style={menuItemStyle}>
+                      Device Parameter
+                    </DropdownMenu.SubTrigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.SubContent
+                        sideOffset={2}
+                        style={{
+                          minWidth: 180,
+                          borderRadius: 4,
+                          padding: "4px 0",
+                          backgroundColor: "var(--vsdaw-panel-bg)",
+                          border: "1px solid var(--vsdaw-border)",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+                          zIndex: 100,
+                        }}
+                      >
+                        {track.inserts.map((insert) => (
+                          <DropdownMenu.Sub key={insert.id}>
+                            <DropdownMenu.SubTrigger style={menuItemStyle}>
+                              {insert.name}
+                            </DropdownMenu.SubTrigger>
+                            <DropdownMenu.Portal>
+                              <DropdownMenu.SubContent
+                                sideOffset={2}
+                                style={{
+                                  minWidth: 160,
+                                  borderRadius: 4,
+                                  padding: "4px 0",
+                                  backgroundColor: "var(--vsdaw-panel-bg)",
+                                  border: "1px solid var(--vsdaw-border)",
+                                  boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+                                  zIndex: 100,
+                                }}
+                              >
+                                {(deviceParametersById?.[insert.id] ?? []).map((param) => (
+                                  <DropdownMenu.Item
+                                    key={param.name}
+                                    style={menuItemStyle}
+                                    onClick={() =>
+                                      addLane({
+                                        type: "device",
+                                        trackId: track.id,
+                                        deviceId: insert.id,
+                                        parameter: param.name,
+                                      })
+                                    }
+                                  >
+                                    {param.name}
+                                  </DropdownMenu.Item>
+                                ))}
+                                {(deviceParametersById?.[insert.id] ?? []).length === 0 && (
+                                  <DropdownMenu.Item disabled style={menuItemStyle}>
+                                    No parameters
+                                  </DropdownMenu.Item>
+                                )}
+                              </DropdownMenu.SubContent>
+                            </DropdownMenu.Portal>
+                          </DropdownMenu.Sub>
+                        ))}
+                      </DropdownMenu.SubContent>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Sub>
+                )}
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Sub>
+
+          {track.automationLanes.length > 0 && (
+            <>
+              <DropdownMenu.Separator
+                style={{ height: 1, backgroundColor: "var(--vsdaw-border)", margin: "4px 0" }}
+              />
+              {track.automationLanes.map((lane) => (
+                <DropdownMenu.Item
+                  key={lane.id}
+                  style={{ ...menuItemStyle, color: "var(--vsdaw-error)" }}
+                  onClick={() => onRemoveLane?.(lane.id)}
+                >
+                  Remove {lane.target.type === "device" ? lane.target.parameter : lane.target.type}
+                </DropdownMenu.Item>
+              ))}
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

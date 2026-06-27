@@ -132,6 +132,7 @@ const TimelineView: React.FC = () => {
                 <TrackHeader
                   key={track.id}
                   track={track}
+                  deviceParametersById={state.deviceParametersById}
                   onMute={() => state.trackActions.setMute(track.id, !track.muted)}
                   onSolo={() => state.trackActions.setSolo(track.id, !track.soloed)}
                   onArm={() => state.trackActions.setArm(track.id, !track.armed)}
@@ -143,6 +144,9 @@ const TimelineView: React.FC = () => {
                   onAddInsert={(deviceName: string) =>
                     state.trackActions.addInsert(track.id, deviceName)
                   }
+                  onAddAutomationLane={state.automationActions.addLane}
+                  onRemoveAutomationLane={state.automationActions.removeLane}
+                  onGetDeviceParameters={state.deviceActions.getParameters}
                 />
               ))}
             </div>
@@ -157,6 +161,9 @@ const TimelineView: React.FC = () => {
                   onSeek={state.transport.seek}
                   onSelectRegion={state.timelineActions.selectRegion}
                   onMoveRegion={state.timelineActions.moveRegion}
+                  onAddAutomationPoint={state.automationActions.addPoint}
+                  onMoveAutomationPoint={state.automationActions.movePoint}
+                  onDeleteAutomationPoint={state.automationActions.deletePoint}
                 />
               ) : (
                 <EmptyState

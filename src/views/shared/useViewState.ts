@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { messageBus } from "./messageBus.js";
 import type {
+  AutomationTarget,
   BrowserNode,
   DeviceCategory,
   DeviceParameter,
@@ -34,6 +35,9 @@ export function useViewState(view: ViewName) {
     deviceId: string;
     parameters: DeviceParameter[];
   } | null>(null);
+  const [deviceParametersById, setDeviceParametersById] = useState<
+    Record<string, DeviceParameter[]>
+  >({});
   const [error, setError] = useState<string | null>(null);
 
   const send = useCallback((message: ViewMessage) => {
@@ -70,6 +74,10 @@ export function useViewState(view: ViewName) {
           break;
         case "host/deviceParameters":
           setDeviceParameters({ deviceId: message.deviceId, parameters: message.parameters });
+          setDeviceParametersById((prev) => ({
+            ...prev,
+            [message.deviceId]: message.parameters,
+          }));
           break;
         case "host/error":
           setError(message.message);
@@ -117,6 +125,17 @@ export function useViewState(view: ViewName) {
       send({ type: "timeline/moveRegion", regionId, start }),
   };
 
+  const automationActions = {
+    addLane: (trackId: string, target: AutomationTarget) =>
+      send({ type: "automation/addLane", trackId, target }),
+    removeLane: (laneId: string) => send({ type: "automation/removeLane", laneId }),
+    addPoint: (laneId: string, position: number, value: number) =>
+      send({ type: "automation/addPoint", laneId, position, value }),
+    movePoint: (pointId: string, position?: number, value?: number) =>
+      send({ type: "automation/movePoint", pointId, position, value }),
+    deletePoint: (pointId: string) => send({ type: "automation/deletePoint", pointId }),
+  };
+
   const mixerActions = {
     openDevice: (trackId: string, slotIndex: number) =>
       send({ type: "mixer/openDevice", trackId, slotIndex }),
@@ -159,10 +178,12 @@ export function useViewState(view: ViewName) {
     selection,
     browserRoot,
     deviceParameters,
+    deviceParametersById,
     error,
     transport,
     trackActions,
     timelineActions,
+    automationActions,
     mixerActions,
     deviceActions,
     browserActions,

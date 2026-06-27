@@ -6,6 +6,7 @@ import type {
   DeviceCategory,
   DeviceParameter,
   HostMessage,
+  NoteState,
   SelectionState,
   TimePosition,
   TimeSignature,
@@ -29,6 +30,7 @@ export function useViewState(view: ViewName) {
   const [bpm, setBpm] = useState(120);
   const [timeSignature, setTimeSignature] = useState<TimeSignature>(defaultTimeSignature);
   const [tracks, setTracks] = useState<TrackState[]>([]);
+  const [notes, setNotes] = useState<NoteState[]>([]);
   const [selection, setSelection] = useState<SelectionState>({});
   const [browserRoot, setBrowserRoot] = useState<BrowserNode | null>(null);
   const [deviceParameters, setDeviceParameters] = useState<{
@@ -65,6 +67,9 @@ export function useViewState(view: ViewName) {
           break;
         case "host/tracks":
           setTracks(message.tracks);
+          break;
+        case "host/notes":
+          setNotes(message.notes);
           break;
         case "host/selection":
           setSelection(message);
@@ -136,6 +141,22 @@ export function useViewState(view: ViewName) {
     deletePoint: (pointId: string) => send({ type: "automation/deletePoint", pointId }),
   };
 
+  const pianoRollActions = {
+    createNote: (
+      regionId: string,
+      position: number,
+      duration: number,
+      pitch: number,
+      velocity: number,
+    ) => send({ type: "note/create", regionId, position, duration, pitch, velocity }),
+    moveNote: (noteId: string, position?: number, pitch?: number) =>
+      send({ type: "note/move", noteId, position, pitch }),
+    resizeNote: (noteId: string, duration: number) => send({ type: "note/resize", noteId, duration }),
+    deleteNote: (noteId: string) => send({ type: "note/delete", noteId }),
+    setNoteVelocity: (noteId: string, velocity: number) =>
+      send({ type: "note/setVelocity", noteId, velocity }),
+  };
+
   const mixerActions = {
     openDevice: (trackId: string, slotIndex: number) =>
       send({ type: "mixer/openDevice", trackId, slotIndex }),
@@ -175,6 +196,7 @@ export function useViewState(view: ViewName) {
     bpm,
     timeSignature,
     tracks,
+    notes,
     selection,
     browserRoot,
     deviceParameters,
@@ -184,6 +206,7 @@ export function useViewState(view: ViewName) {
     trackActions,
     timelineActions,
     automationActions,
+    pianoRollActions,
     mixerActions,
     deviceActions,
     browserActions,

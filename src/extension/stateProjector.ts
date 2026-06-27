@@ -3,6 +3,7 @@ import {
   type AutomationLaneState as EngineAutomationLaneState,
   type AutomationPointState as EngineAutomationPointState,
   type DeviceListItem,
+  type NoteState as EngineNoteState,
   type RegionState as EngineRegionState,
   type TrackState as EngineTrackState,
   MessageType,
@@ -13,6 +14,7 @@ import { DEFAULT_PPQN, ppqnToBarsBeatsTicks, ppqnToSeconds } from "../shared/tim
 import type {
   BrowserNode,
   HostMessage,
+  NoteState as ViewNoteState,
   SelectionState,
   TimePosition,
   RegionState as ViewRegionState,
@@ -86,6 +88,9 @@ export class ProjectStateProjector {
 
     const tracks = this.buildTracksMessage(state);
     this.broadcast(tracks);
+
+    const notes = this.buildNotesMessage(state);
+    this.broadcast(notes);
   }
 
   handleTransportPositionChanged(position: number): void {
@@ -215,6 +220,13 @@ export class ProjectStateProjector {
     };
   }
 
+  private buildNotesMessage(state: ProjectState): HostMessage & { type: "host/notes" } {
+    return {
+      type: "host/notes",
+      notes: state.notes.map((note) => this.convertNote(note)),
+    };
+  }
+
   private convertTrack(
     track: EngineTrackState,
     regions: EngineRegionState[],
@@ -258,6 +270,17 @@ export class ProjectStateProjector {
       duration: region.duration,
       name: region.name,
       color: regionColor(region.hue),
+    };
+  }
+
+  private convertNote(note: EngineNoteState): ViewNoteState {
+    return {
+      id: note.id,
+      regionId: note.regionId,
+      start: note.position,
+      duration: note.duration,
+      pitch: note.pitch,
+      velocity: note.velocity,
     };
   }
 }

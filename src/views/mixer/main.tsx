@@ -22,6 +22,7 @@ const masterTrack = (tracks: TrackState[], themeColor: string): TrackState => ({
   height: 0,
   inserts: [],
   regions: [],
+  automationLanes: [],
 });
 
 const MixerView: React.FC = () => {

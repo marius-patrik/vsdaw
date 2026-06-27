@@ -1,5 +1,10 @@
 import {
   type AudioImportPayload,
+  type AutomationAddLanePayload,
+  type AutomationAddPointPayload,
+  type AutomationDeletePointPayload,
+  type AutomationMovePointPayload,
+  type AutomationRemoveLanePayload,
   type DeviceCreatePayload,
   type DeviceIdPayload,
   type DeviceListPayload,
@@ -412,6 +417,48 @@ function routeMessage(
         new Uint8Array(opts.data),
         opts.timestamp ?? performance.now(),
       );
+      return { type: "ok" };
+    }
+
+    // Automation
+    case MessageType.AutomationAddLane: {
+      const opts = p as AutomationAddLanePayload;
+      if (!opts?.trackId || !opts.target) {
+        return { type: "error", message: "trackId and target are required" };
+      }
+      const id = controller.addAutomationLane(opts.trackId, opts.target);
+      return { type: "ok", payload: { laneId: id } };
+    }
+    case MessageType.AutomationRemoveLane: {
+      const opts = p as AutomationRemoveLanePayload;
+      if (!opts?.laneId) {
+        return { type: "error", message: "laneId is required" };
+      }
+      controller.removeAutomationLane(opts.laneId);
+      return { type: "ok" };
+    }
+    case MessageType.AutomationAddPoint: {
+      const opts = p as AutomationAddPointPayload;
+      if (!opts?.laneId || opts.position == null || opts.value == null) {
+        return { type: "error", message: "laneId, position and value are required" };
+      }
+      const id = controller.addAutomationPoint(opts.laneId, opts.position, opts.value);
+      return { type: "ok", payload: { pointId: id } };
+    }
+    case MessageType.AutomationMovePoint: {
+      const opts = p as AutomationMovePointPayload;
+      if (!opts?.pointId) {
+        return { type: "error", message: "pointId is required" };
+      }
+      controller.moveAutomationPoint(opts.pointId, opts.position, opts.value);
+      return { type: "ok" };
+    }
+    case MessageType.AutomationDeletePoint: {
+      const opts = p as AutomationDeletePointPayload;
+      if (!opts?.pointId) {
+        return { type: "error", message: "pointId is required" };
+      }
+      controller.deleteAutomationPoint(opts.pointId);
       return { type: "ok" };
     }
 

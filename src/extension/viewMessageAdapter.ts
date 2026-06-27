@@ -8,6 +8,11 @@
  */
 
 import {
+  type AutomationAddLanePayload,
+  type AutomationAddPointPayload,
+  type AutomationDeletePointPayload,
+  type AutomationMovePointPayload,
+  type AutomationRemoveLanePayload,
   type DeviceIdPayload,
   type DeviceParameterPayload,
   type MessageEnvelope,
@@ -190,6 +195,39 @@ export function adaptViewMessage(
         position: message.start,
       };
       return { ...base, type: MessageType.RegionMove, payload };
+    }
+
+    // Automation
+    case "automation/addLane": {
+      const payload: AutomationAddLanePayload = {
+        trackId: message.trackId,
+        target: message.target,
+      };
+      return { ...base, type: MessageType.AutomationAddLane, payload };
+    }
+    case "automation/removeLane": {
+      const payload: AutomationRemoveLanePayload = { laneId: message.laneId };
+      return { ...base, type: MessageType.AutomationRemoveLane, payload };
+    }
+    case "automation/addPoint": {
+      const payload: AutomationAddPointPayload = {
+        laneId: message.laneId,
+        position: message.position,
+        value: message.value,
+      };
+      return { ...base, type: MessageType.AutomationAddPoint, payload };
+    }
+    case "automation/movePoint": {
+      const payload: AutomationMovePointPayload = {
+        pointId: message.pointId,
+        position: message.position,
+        value: message.value,
+      };
+      return { ...base, type: MessageType.AutomationMovePoint, payload };
+    }
+    case "automation/deletePoint": {
+      const payload: AutomationDeletePointPayload = { pointId: message.pointId };
+      return { ...base, type: MessageType.AutomationDeletePoint, payload };
     }
 
     // Piano roll

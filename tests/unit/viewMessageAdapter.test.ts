@@ -274,6 +274,66 @@ describe("viewMessageAdapter", () => {
     });
   });
 
+  describe("automation messages", () => {
+    test("automation/addLane -> automation.addLane", () => {
+      const result = adaptViewMessage(PROJECT_ID, {
+        type: "automation/addLane",
+        trackId: "track-1",
+        target: { type: "volume", trackId: "track-1" },
+      });
+      expectEnvelope(result);
+      expect(result.type).toBe(MessageType.AutomationAddLane);
+      expect(result.payload).toEqual({
+        trackId: "track-1",
+        target: { type: "volume", trackId: "track-1" },
+      });
+    });
+
+    test("automation/removeLane -> automation.removeLane", () => {
+      const result = adaptViewMessage(PROJECT_ID, {
+        type: "automation/removeLane",
+        laneId: "lane-1",
+      });
+      expectEnvelope(result);
+      expect(result.type).toBe(MessageType.AutomationRemoveLane);
+      expect(result.payload).toEqual({ laneId: "lane-1" });
+    });
+
+    test("automation/addPoint -> automation.addPoint", () => {
+      const result = adaptViewMessage(PROJECT_ID, {
+        type: "automation/addPoint",
+        laneId: "lane-1",
+        position: 4,
+        value: 0.75,
+      });
+      expectEnvelope(result);
+      expect(result.type).toBe(MessageType.AutomationAddPoint);
+      expect(result.payload).toEqual({ laneId: "lane-1", position: 4, value: 0.75 });
+    });
+
+    test("automation/movePoint -> automation.movePoint", () => {
+      const result = adaptViewMessage(PROJECT_ID, {
+        type: "automation/movePoint",
+        pointId: "point-1",
+        position: 8,
+        value: 0.25,
+      });
+      expectEnvelope(result);
+      expect(result.type).toBe(MessageType.AutomationMovePoint);
+      expect(result.payload).toEqual({ pointId: "point-1", position: 8, value: 0.25 });
+    });
+
+    test("automation/deletePoint -> automation.deletePoint", () => {
+      const result = adaptViewMessage(PROJECT_ID, {
+        type: "automation/deletePoint",
+        pointId: "point-1",
+      });
+      expectEnvelope(result);
+      expect(result.type).toBe(MessageType.AutomationDeletePoint);
+      expect(result.payload).toEqual({ pointId: "point-1" });
+    });
+  });
+
   describe("piano roll messages", () => {
     test("pianoRoll/setNoteVelocity -> midi.setNoteVelocity", () => {
       const result = adaptViewMessage(PROJECT_ID, {

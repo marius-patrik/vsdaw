@@ -43,6 +43,8 @@ function createProjectState(
     tracks: [],
     regions: [],
     notes: [],
+    automationLanes: [],
+    automationPoints: [],
     transport: { ...DEFAULT_TRANSPORT, ...transportOverrides },
     ...overrides,
   };
@@ -152,6 +154,43 @@ describe("ProjectStateProjector", () => {
       name: "Loop",
     });
     expect(viewTrack.regions[0].color).toMatch(/^hsl\(/);
+  });
+
+  test("broadcasts automation lanes and points with increased track height", () => {
+    const router = createRouter();
+    const projector = new ProjectStateProjector({
+      projectId: PROJECT_ID,
+      router,
+      getProjectName: () => "Test",
+      getSaved: () => true,
+    });
+
+    const track = createTrack();
+    const lane = {
+      id: "lane-1",
+      trackId: track.id,
+      target: { type: "volume" as const, trackId: track.id },
+    };
+    const point = { id: "point-1", laneId: "lane-1", position: 2, value: 0.75 };
+    const state = createProjectState({
+      tracks: [track],
+      automationLanes: [lane],
+      automationPoints: [point],
+    });
+    projector.handleStateUpdate(state);
+
+    const calls = (router.broadcastToViews as jest.Mock).mock.calls as [string, HostMessage][];
+    const tracksCall = calls.find(([id, msg]) => id === PROJECT_ID && msg.type === "host/tracks");
+    expect(tracksCall).toBeDefined();
+    if (!tracksCall) throw new Error("tracks message not broadcast");
+    const tracks = tracksCall[1] as Extract<HostMessage, { type: "host/tracks" }>;
+    expect(tracks.tracks).toHaveLength(1);
+
+    const viewTrack = tracks.tracks[0];
+    expect(viewTrack.height).toBe(48 + 60);
+    expect(viewTrack.automationLanes).toHaveLength(1);
+    expect(viewTrack.automationLanes[0].id).toBe("lane-1");
+    expect(viewTrack.automationLanes[0].points).toEqual([point]);
   });
 
   test("defaults track color when engine track has none", () => {

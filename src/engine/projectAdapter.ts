@@ -43,7 +43,11 @@ import {
   Workers,
 } from "@opendaw/studio-core";
 import { SampleStorage, SoundfontStorage } from "@opendaw/studio-core";
+import { DEFAULT_AUTOMATION_VALUE } from "../shared/automation.js";
 import type {
+  AutomationLaneState,
+  AutomationPointState,
+  AutomationTarget,
   TrackType as ApiTrackType,
   DeviceListItem,
   DeviceParameterDescriptor,
@@ -86,6 +90,9 @@ export class ProjectController {
   private trackColors = new Map<string, string>();
   private trackTypes = new Map<string, ApiTrackType>();
   private takeRegions = new Map<string, AnyRegionBoxAdapter[]>();
+  private automationLanes = new Map<string, AutomationLaneState>();
+  private automationPoints = new Map<string, AutomationPointState>();
+  private lastAutomationValues = new Map<string, number>();
 
   constructor(options: ProjectControllerOptions) {
     this.bootEnv = options.bootEnv;
@@ -207,6 +214,9 @@ export class ProjectController {
     this.trackColors.clear();
     this.trackTypes.clear();
     this.takeRegions.clear();
+    this.automationLanes.clear();
+    this.automationPoints.clear();
+    this.lastAutomationValues.clear();
   }
 
   // ---------------------------------------------------------------------------
@@ -673,6 +683,151 @@ export class ProjectController {
   }
 
   // ---------------------------------------------------------------------------
+  // Automation lanes
+  // ---------------------------------------------------------------------------
+
+  addAutomationLane(trackId: string, target: AutomationTarget): string {
+    this.resolveAudioUnit(trackId);
+    const laneId = UUID.toString(UUID.generate());
+    this.automationLanes.set(laneId, { id: laneId, trackId, target });
+    this.broadcastState();
+    return laneId;
+  }
+
+  removeAutomationLane(laneId: string) {
+    const lane = this.automationLanes.get(laneId);
+    if (!lane) {
+      throw new Error(`Automation lane not found: ${laneId}`);
+    }
+    this.automationLanes.delete(laneId);
+    for (const [id, point] of this.automationPoints) {
+      if (point.laneId === laneId) {
+        this.automationPoints.delete(id);
+      }
+    }
+    this.lastAutomationValues.delete(laneId);
+    this.broadcastState();
+  }
+
+  addAutomationPoint(laneId: string, position: number, value: number): string {
+    const lane = this.automationLanes.get(laneId);
+    if (!lane) {
+      throw new Error(`Automation lane not found: ${laneId}`);
+    }
+    const pointId = UUID.toString(UUID.generate());
+    this.automationPoints.set(pointId, {
+      id: pointId,
+      laneId,
+      position,
+      value: Math.max(0, Math.min(1, value)),
+    });
+    this.applyAutomationAtCurrentPosition();
+    this.broadcastState();
+    return pointId;
+  }
+
+  moveAutomationPoint(pointId: string, position?: number, value?: number) {
+    const point = this.automationPoints.get(pointId);
+    if (!point) {
+      throw new Error(`Automation point not found: ${pointId}`);
+    }
+    if (position !== undefined) point.position = position;
+    if (value !== undefined) point.value = Math.max(0, Math.min(1, value));
+    this.applyAutomationAtCurrentPosition();
+    this.broadcastState();
+  }
+
+  deleteAutomationPoint(pointId: string) {
+    const point = this.automationPoints.get(pointId);
+    if (!point) {
+      throw new Error(`Automation point not found: ${pointId}`);
+    }
+    this.automationPoints.delete(pointId);
+    this.applyAutomationAtCurrentPosition();
+    this.broadcastState();
+  }
+
+  private getAutomationPointsForLane(laneId: string): AutomationPointState[] {
+    return Array.from(this.automationPoints.values())
+      .filter((point) => point.laneId === laneId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  private interpolateAutomationValue(laneId: string, position: number): number {
+    const points = this.getAutomationPointsForLane(laneId);
+    if (points.length === 0) {
+      return DEFAULT_AUTOMATION_VALUE;
+    }
+    if (position <= points[0].position) {
+      return points[0].value;
+    }
+    if (position >= points[points.length - 1].position) {
+      return points[points.length - 1].value;
+    }
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      if (position >= a.position && position <= b.position) {
+        const t =
+          b.position === a.position ? 0 : (position - a.position) / (b.position - a.position);
+        return a.value + (b.value - a.value) * t;
+      }
+    }
+    return points[points.length - 1].value;
+  }
+
+  private applyAutomationAtCurrentPosition() {
+    const position = this.engine.position.getValue() / 960;
+    this.applyAutomation(position);
+  }
+
+  private applyAutomation(position: number) {
+    for (const lane of this.automationLanes.values()) {
+      const value = this.interpolateAutomationValue(lane.id, position);
+      const last = this.lastAutomationValues.get(lane.id);
+      if (last !== undefined && Math.abs(last - value) < 0.001) {
+        continue;
+      }
+      this.lastAutomationValues.set(lane.id, value);
+      this.applyAutomationValue(lane, value);
+    }
+  }
+
+  private applyAutomationValue(lane: AutomationLaneState, value: number) {
+    try {
+      switch (lane.target.type) {
+        case "volume": {
+          const db = value <= 0 ? -120 : 20 * Math.log10(value);
+          this.setTrackVolumeDb(lane.target.trackId, db);
+          break;
+        }
+        case "pan": {
+          this.setTrackPan(lane.target.trackId, value * 2 - 1);
+          break;
+        }
+        case "device": {
+          const deviceId = lane.target.deviceId;
+          const parameter = lane.target.parameter;
+          if (!deviceId || !parameter) return;
+          const params = this.getDeviceParameters(deviceId);
+          const param = params.find((p) => p.name === parameter);
+          if (!param) return;
+          if (param.type === "boolean") {
+            this.setDeviceParameter(deviceId, parameter, value >= 0.5);
+          } else {
+            const min = typeof param.min === "number" ? param.min : 0;
+            const max = typeof param.max === "number" ? param.max : 1;
+            this.setDeviceParameter(deviceId, parameter, min + value * (max - min));
+          }
+          break;
+        }
+      }
+    } catch (error: unknown) {
+      warn("automation", error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Effects / inserts
   // ---------------------------------------------------------------------------
 
@@ -1060,6 +1215,8 @@ export class ProjectController {
       tracks,
       regions,
       notes,
+      automationLanes: Array.from(this.automationLanes.values()),
+      automationPoints: Array.from(this.automationPoints.values()),
       transport,
     };
   }
@@ -1191,7 +1348,11 @@ export class ProjectController {
   }
 
   private broadcastTransportPosition() {
-    this.onTransportPosition?.(this.engine.position.getValue());
+    const position = this.engine.position.getValue();
+    this.onTransportPosition?.(position);
+    if (this.engine.isPlaying.getValue()) {
+      this.applyAutomation(position / 960);
+    }
   }
 }
 

@@ -75,6 +75,12 @@ function createMockController(): MockController {
     stopRecording: record("stopRecording"),
     compTakes: record("compTakes"),
 
+    addAutomationLane: record("addAutomationLane", "lane-new"),
+    removeAutomationLane: record("removeAutomationLane"),
+    addAutomationPoint: record("addAutomationPoint", "point-new"),
+    moveAutomationPoint: record("moveAutomationPoint"),
+    deleteAutomationPoint: record("deleteAutomationPoint"),
+
     getPeaks: jest.fn().mockResolvedValue({
       sampleId: "sample-1",
       channel: 0,
@@ -95,6 +101,8 @@ function createMockController(): MockController {
       tracks: [],
       regions: [],
       notes: [],
+      automationLanes: [],
+      automationPoints: [],
       transport: {
         isPlaying: false,
         isRecording: false,
@@ -448,6 +456,91 @@ describe("messageHandlers - export", () => {
     const result = await handleMessage(controller, makeMessage(MessageType.ExportAudio, {}));
     expect(result.type).toBe("error");
     expect((result as { message: string }).message).toContain("format is required");
+  });
+});
+
+describe("messageHandlers - automation", () => {
+  test("AutomationAddLane creates a lane and returns id", async () => {
+    const controller = createMockController();
+    const result = await expectOk(
+      handleMessage(
+        controller,
+        makeMessage(MessageType.AutomationAddLane, {
+          trackId: "t1",
+          target: { type: "volume", trackId: "t1" },
+        }),
+      ),
+    );
+    expect(result.payload).toEqual({ laneId: "lane-new" });
+    expect(controller.calls).toContainEqual({
+      method: "addAutomationLane",
+      args: ["t1", { type: "volume", trackId: "t1" }],
+    });
+  });
+
+  test("AutomationAddLane returns error when trackId is missing", async () => {
+    const controller = createMockController();
+    const result = await handleMessage(
+      controller,
+      makeMessage(MessageType.AutomationAddLane, { target: { type: "volume", trackId: "t1" } }),
+    );
+    expect(result.type).toBe("error");
+    expect((result as { message: string }).message).toContain("trackId");
+  });
+
+  test("AutomationRemoveLane forwards laneId", async () => {
+    const controller = createMockController();
+    await expectOk(
+      handleMessage(controller, makeMessage(MessageType.AutomationRemoveLane, { laneId: "l1" })),
+    );
+    expect(controller.calls).toContainEqual({ method: "removeAutomationLane", args: ["l1"] });
+  });
+
+  test("AutomationAddPoint creates a point and returns id", async () => {
+    const controller = createMockController();
+    const result = await expectOk(
+      handleMessage(
+        controller,
+        makeMessage(MessageType.AutomationAddPoint, { laneId: "l1", position: 4, value: 0.75 }),
+      ),
+    );
+    expect(result.payload).toEqual({ pointId: "point-new" });
+    expect(controller.calls).toContainEqual({
+      method: "addAutomationPoint",
+      args: ["l1", 4, 0.75],
+    });
+  });
+
+  test("AutomationAddPoint returns error when fields are missing", async () => {
+    const controller = createMockController();
+    const result = await handleMessage(
+      controller,
+      makeMessage(MessageType.AutomationAddPoint, { laneId: "l1", position: 4 }),
+    );
+    expect(result.type).toBe("error");
+    expect((result as { message: string }).message).toContain("value");
+  });
+
+  test("AutomationMovePoint forwards pointId, position and value", async () => {
+    const controller = createMockController();
+    await expectOk(
+      handleMessage(
+        controller,
+        makeMessage(MessageType.AutomationMovePoint, { pointId: "p1", position: 8, value: 0.25 }),
+      ),
+    );
+    expect(controller.calls).toContainEqual({
+      method: "moveAutomationPoint",
+      args: ["p1", 8, 0.25],
+    });
+  });
+
+  test("AutomationDeletePoint forwards pointId", async () => {
+    const controller = createMockController();
+    await expectOk(
+      handleMessage(controller, makeMessage(MessageType.AutomationDeletePoint, { pointId: "p1" })),
+    );
+    expect(controller.calls).toContainEqual({ method: "deleteAutomationPoint", args: ["p1"] });
   });
 });
 

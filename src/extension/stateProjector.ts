@@ -1,4 +1,7 @@
+import { AUTOMATION_LANE_HEIGHT } from "../shared/automation.js";
 import {
+  type AutomationLaneState as EngineAutomationLaneState,
+  type AutomationPointState as EngineAutomationPointState,
   type DeviceListItem,
   type RegionState as EngineRegionState,
   type TrackState as EngineTrackState,
@@ -206,11 +209,19 @@ export class ProjectStateProjector {
   private buildTracksMessage(state: ProjectState): HostMessage & { type: "host/tracks" } {
     return {
       type: "host/tracks",
-      tracks: state.tracks.map((track) => this.convertTrack(track, state.regions)),
+      tracks: state.tracks.map((track) =>
+        this.convertTrack(track, state.regions, state.automationLanes, state.automationPoints),
+      ),
     };
   }
 
-  private convertTrack(track: EngineTrackState, regions: EngineRegionState[]): ViewTrackState {
+  private convertTrack(
+    track: EngineTrackState,
+    regions: EngineRegionState[],
+    automationLanes: EngineAutomationLaneState[],
+    automationPoints: EngineAutomationPointState[],
+  ): ViewTrackState {
+    const lanes = automationLanes.filter((lane) => lane.trackId === track.id);
     return {
       id: track.id,
       name: track.name,
@@ -220,7 +231,7 @@ export class ProjectStateProjector {
       armed: track.arm,
       volume: dbToLinear(track.volumeDb),
       pan: track.pan,
-      height: DEFAULT_TRACK_HEIGHT,
+      height: DEFAULT_TRACK_HEIGHT + lanes.length * AUTOMATION_LANE_HEIGHT,
       inserts: track.inserts.map((insert) => ({
         id: insert.id,
         name: insert.name,
@@ -231,6 +242,12 @@ export class ProjectStateProjector {
       regions: regions
         .filter((region) => region.trackId === track.id)
         .map((region) => this.convertRegion(region)),
+      automationLanes: lanes.map((lane) => ({
+        id: lane.id,
+        trackId: lane.trackId,
+        target: lane.target,
+        points: automationPoints.filter((point) => point.laneId === lane.id),
+      })),
     };
   }
 

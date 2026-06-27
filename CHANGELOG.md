@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-27
+
+### Added
+
+- Background Chrome audio engine managed by a status-bar icon (Playwright + chrome-launcher).
+- View-to-engine message protocol adapter and engine-state broadcast to views.
+- Redesigned Timeline toolbar with view switcher, Add Track dropdown, Undo/Redo, Import, and Export.
+- Track header controls wired end-to-end (mute, solo, arm, volume, pan, name).
+- Audio and MIDI file import into the `.vsdaw` bundle.
+- Device browser listing OpenDAW factory devices and a parameter panel for inserts.
+- Undo/redo stack with `Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z`.
+- Export audio to disk (WAV; FLAC/OGG/MP3 fallback).
+- Save/load round-trip integration test and host commands for state/track/region access.
+- GitHub milestone `v0.2.0 Public Beta` with issues #1–#10.
+- Second-pass specs for FL Studio parity: piano roll, mixer routing, automation, recording, arranger, plugins.
+
 ## [0.1.0] - 2026-06-25
 
 ### Added

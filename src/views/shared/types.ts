@@ -66,6 +66,7 @@ export interface TrackState {
   regions: RegionState[];
   automationLanes: AutomationLane[];
   outputTrackId?: string | null;
+  inputDeviceId?: string;
   type?: "audio" | "midi" | "bus" | "master";
   sends: SendState[];
 }
@@ -163,6 +164,7 @@ export type ViewMessage =
   | { type: "track/addSend"; trackId: string; targetTrackId: string; amount?: number }
   | { type: "track/removeSend"; sendId: string }
   | { type: "track/setSendAmount"; sendId: string; amount: number }
+  | { type: "track/setInputDevice"; trackId: string; inputDeviceId: string }
   | { type: "device/getParameters"; deviceId: string }
   | { type: "device/setParameter"; deviceId: string; parameter: string; value: number | boolean }
   | { type: "browser/preview"; nodeId: string }

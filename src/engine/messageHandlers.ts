@@ -43,6 +43,7 @@ import {
   type TrackColorPayload,
   type TrackCreatePayload,
   type TrackIdPayload,
+  type TrackInputDevicePayload,
   type TrackInsertMovePayload,
   type TrackInsertPayload,
   type TrackInsertRemovePayload,
@@ -305,6 +306,14 @@ function routeMessage(
         return { type: "error", message: "sendId and amount are required" };
       }
       controller.setTrackSendAmount(opts.sendId, opts.amount);
+      return { type: "ok" };
+    }
+    case MessageType.TrackSetInputDevice: {
+      const opts = p as TrackInputDevicePayload;
+      if (!opts?.trackId || !opts.inputDeviceId) {
+        return { type: "error", message: "trackId and inputDeviceId are required" };
+      }
+      controller.setTrackInputDevice(opts.trackId, opts.inputDeviceId);
       return { type: "ok" };
     }
 

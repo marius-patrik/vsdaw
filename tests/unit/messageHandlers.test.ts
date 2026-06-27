@@ -85,6 +85,7 @@ function createMockController(): MockController {
     addTrackSend: record("addTrackSend", "send-new"),
     removeTrackSend: record("removeTrackSend"),
     setTrackSendAmount: record("setTrackSendAmount"),
+    setTrackInputDevice: record("setTrackInputDevice"),
 
     getPeaks: jest.fn().mockResolvedValue({
       sampleId: "sample-1",
@@ -441,6 +442,20 @@ describe("messageHandlers - track operations", () => {
     expect(controller.calls).toContainEqual({
       method: "setTrackSendAmount",
       args: ["s1", 0.75],
+    });
+  });
+
+  test("TrackSetInputDevice forwards trackId and inputDeviceId", async () => {
+    const controller = createMockController();
+    await expectOk(
+      handleMessage(
+        controller,
+        makeMessage(MessageType.TrackSetInputDevice, { trackId: "t1", inputDeviceId: "mic-1" }),
+      ),
+    );
+    expect(controller.calls).toContainEqual({
+      method: "setTrackInputDevice",
+      args: ["t1", "mic-1"],
     });
   });
 });

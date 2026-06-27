@@ -441,6 +441,17 @@ describe("viewMessageAdapter", () => {
       expect(result.type).toBe(MessageType.TrackSetSendAmount);
       expect(result.payload).toEqual({ sendId: "send-1", amount: 0.75 });
     });
+
+    test("track/setInputDevice -> track.setInputDevice", () => {
+      const result = adaptViewMessage(PROJECT_ID, {
+        type: "track/setInputDevice",
+        trackId: "track-1",
+        inputDeviceId: "mic-1",
+      });
+      expectEnvelope(result);
+      expect(result.type).toBe(MessageType.TrackSetInputDevice);
+      expect(result.payload).toEqual({ trackId: "track-1", inputDeviceId: "mic-1" });
+    });
   });
 
   describe("unsupported messages", () => {

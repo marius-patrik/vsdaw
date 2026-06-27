@@ -167,6 +167,8 @@ export function useViewState(view: ViewName) {
     removeSend: (sendId: string) => send({ type: "track/removeSend", sendId }),
     setSendAmount: (sendId: string, amount: number) =>
       send({ type: "track/setSendAmount", sendId, amount }),
+    setInputDevice: (trackId: string, inputDeviceId: string) =>
+      send({ type: "track/setInputDevice", trackId, inputDeviceId }),
   };
 
   const deviceActions = {

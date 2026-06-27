@@ -6,6 +6,7 @@ import type { AutomationTarget, DeviceParameter, TrackState } from "../../views/
 export interface TrackHeaderProps {
   track: TrackState;
   outputs?: { id: string; name: string }[];
+  inputDevices?: { id: string; label: string }[];
   deviceParametersById?: Record<string, DeviceParameter[]>;
   onMute: () => void;
   onSolo: () => void;
@@ -20,6 +21,7 @@ export interface TrackHeaderProps {
   onRemoveAutomationLane?: (laneId: string) => void;
   onGetDeviceParameters?: (deviceId: string) => void;
   onSetOutput?: (outputTrackId: string | null) => void;
+  onSetInputDevice?: (inputDeviceId: string) => void;
 }
 
 const TRACK_COLORS = [
@@ -38,6 +40,7 @@ const INSERT_DEVICES = ["Reverb", "Delay", "Chorus", "Compressor", "EQ"];
 export const TrackHeader: React.FC<TrackHeaderProps> = ({
   track,
   outputs,
+  inputDevices,
   deviceParametersById,
   onMute,
   onSolo,
@@ -52,6 +55,7 @@ export const TrackHeader: React.FC<TrackHeaderProps> = ({
   onRemoveAutomationLane,
   onGetDeviceParameters,
   onSetOutput,
+  onSetInputDevice,
 }) => {
   const [draftName, setDraftName] = React.useState(track.name);
 
@@ -148,6 +152,23 @@ export const TrackHeader: React.FC<TrackHeaderProps> = ({
           {outputs.map((o) => (
             <option key={o.id} value={o.id}>
               {o.name}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {onSetInputDevice && track.type === "audio" && inputDevices && inputDevices.length > 0 && (
+        <select
+          value={track.inputDeviceId ?? ""}
+          onChange={(e) => onSetInputDevice(e.target.value)}
+          className="text-xs px-1 py-0.5 rounded border"
+          style={{ backgroundColor: "var(--vsdaw-bg)", borderColor: "var(--vsdaw-border)", color: "inherit" }}
+          aria-label="Input device"
+        >
+          <option value="">Default input</option>
+          {inputDevices.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.label}
             </option>
           ))}
         </select>

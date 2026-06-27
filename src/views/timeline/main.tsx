@@ -18,6 +18,17 @@ const TimelineView: React.FC = () => {
   const isSyncing = React.useRef(false);
   const [zoom, setZoom] = React.useState(1);
   const [snapDivision, setSnapDivision] = React.useState("beat");
+  const [inputDevices, setInputDevices] = React.useState<{ id: string; label: string }[]>([]);
+
+  React.useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const audioInputs = devices
+        .filter((d) => d.kind === "audioinput")
+        .map((d) => ({ id: d.deviceId, label: d.label || `Input ${d.deviceId.slice(0, 6)}` }));
+      setInputDevices(audioInputs);
+    });
+  }, []);
 
   const positionBeats = React.useMemo(() => {
     const numerator = state.timeSignature.numerator || 4;
@@ -141,6 +152,7 @@ const TimelineView: React.FC = () => {
                   outputs={state.tracks
                     .filter((t) => t.id !== track.id && t.type === "bus")
                     .map((t) => ({ id: t.id, name: t.name }))}
+                  inputDevices={inputDevices}
                   deviceParametersById={state.deviceParametersById}
                   onMute={() => state.trackActions.setMute(track.id, !track.muted)}
                   onSolo={() => state.trackActions.setSolo(track.id, !track.soloed)}
@@ -157,6 +169,9 @@ const TimelineView: React.FC = () => {
                   onRemoveAutomationLane={state.automationActions.removeLane}
                   onGetDeviceParameters={state.deviceActions.getParameters}
                   onSetOutput={(outputTrackId) => state.mixerActions.setOutput(track.id, outputTrackId)}
+                  onSetInputDevice={(inputDeviceId) =>
+                    state.mixerActions.setInputDevice(track.id, inputDeviceId)
+                  }
                 />
               ))}
             </div>

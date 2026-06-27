@@ -55,6 +55,7 @@ export const window = {
   showErrorMessage: jest.fn().mockResolvedValue(undefined),
   showInformationMessage: jest.fn().mockResolvedValue(undefined),
   showQuickPick: jest.fn().mockResolvedValue(undefined),
+  showOpenDialog: jest.fn().mockResolvedValue(undefined),
   showSaveDialog: jest.fn().mockResolvedValue(undefined),
   withProgress: jest.fn((_options, task) => task({ report: jest.fn() })),
   createStatusBarItem: jest.fn(() => ({

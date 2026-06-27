@@ -8,6 +8,8 @@
  */
 
 import {
+  type DeviceIdPayload,
+  type DeviceParameterPayload,
   type MessageEnvelope,
   MessageType,
   type MidiNoteIdPayload,
@@ -162,8 +164,23 @@ export function adaptViewMessage(
         trackId: message.trackId,
         deviceName: message.deviceName,
         insertIndex: message.insertIndex,
+        slot: message.slot,
       };
       return { ...base, type: MessageType.TrackAddInsert, payload };
+    }
+
+    // Devices
+    case "device/getParameters": {
+      const payload: DeviceIdPayload = { deviceId: message.deviceId };
+      return { ...base, type: MessageType.DeviceGetParameters, payload };
+    }
+    case "device/setParameter": {
+      const payload: DeviceParameterPayload = {
+        deviceId: message.deviceId,
+        parameter: message.parameter,
+        value: message.value,
+      };
+      return { ...base, type: MessageType.DeviceSetParameter, payload };
     }
 
     // Timeline
@@ -202,6 +219,8 @@ export function adaptViewMessage(
     case "command/delete":
     case "command/duplicate":
     case "command/export":
+    case "command/importAudio":
+    case "command/importMidi":
     case "command/show":
       return undefined;
 

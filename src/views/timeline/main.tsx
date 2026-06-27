@@ -111,6 +111,8 @@ const TimelineView: React.FC = () => {
             onAddTrack={state.trackActions.createTrack}
             onUndo={state.commands.undo}
             onRedo={state.commands.redo}
+            onImportAudio={state.commands.importAudio}
+            onImportMidi={state.commands.importMidi}
             onSettings={() => state.commands.showView("browser")}
             onExport={state.commands.export}
           />

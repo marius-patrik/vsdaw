@@ -1,7 +1,6 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { MessageType } from "../shared/protocol.js";
 import type { PlaywrightEngineManager } from "./playwrightEngine.js";
 import type { ProjectManager } from "./projectManager.js";
 import type {
@@ -100,7 +99,7 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     const projectId = getActiveProjectId(projectManager);
     if (!projectId) return;
 
-    const format = await vscode.window.showQuickPick(["wav", "flac", "ogg"], {
+    const format = await vscode.window.showQuickPick(["wav", "flac", "ogg", "mp3"], {
       placeHolder: "Select export format",
     });
     if (!format) return;
@@ -126,20 +125,14 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     });
     if (!destination) return;
 
-    await projectManager.router.requestEngine(
+    await projectManager.exportProject({
       projectId,
-      MessageType.ExportRender,
-      {
-        format: format as "wav" | "flac" | "ogg",
-        fileName: destination.fsPath,
-        start: 0,
-        end: 0,
-        stems: false,
-      },
-      { responseType: `${MessageType.ExportRender}.ack`, timeoutMs: 120000 },
-    );
-
-    vscode.window.showInformationMessage(`VSDAW export to ${destination.fsPath} complete`);
+      destination,
+      format: format as "wav" | "flac" | "ogg" | "mp3",
+      start: 0,
+      end: 0,
+      stem: false,
+    });
   });
 
   register("vsdaw.settings", () => {

@@ -5,6 +5,9 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { BundleError, createEmptyProject, readBundle, writeBundle } from "../shared/bundle.js";
 import {
+  type ExportAudioPayload,
+  type ExportAudioResult,
+  type ExportFormat,
   MessageType,
   type ProjectLoadPayload,
   type ProjectNewPayload,
@@ -319,6 +322,72 @@ export class ProjectManager implements vscode.Disposable {
     session.isUntitled = false;
 
     await this.saveSession(session, token);
+  }
+
+  async exportProject(options: {
+    projectId: string;
+    destination: vscode.Uri;
+    format: ExportFormat;
+    start?: number;
+    end?: number;
+    stem?: boolean;
+  }): Promise<void> {
+    const { projectId, destination, format, start, end, stem } = options;
+    const session = this.sessions.get(projectId);
+    if (!session) {
+      throw new Error(`No session for project ${projectId}`);
+    }
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "VSDAW export",
+        cancellable: false,
+      },
+      async (progress) => {
+        progress.report({ increment: 10, message: "Rendering audio..." });
+        const response = await this.router.requestEngine(
+          projectId,
+          MessageType.ExportAudio,
+          { format, start, end, stems: stem } satisfies ExportAudioPayload,
+          { responseType: `${MessageType.ExportAudio}.ack`, timeoutMs: 120000 },
+        );
+
+        progress.report({ increment: 50, message: "Encoding..." });
+        const result = response.payload as ExportAudioResult | undefined;
+        if (!result?.data) {
+          throw new Error("Engine returned empty export data");
+        }
+
+        let outputFormat: ExportFormat = format;
+        let outputBytes = base64ToUint8Array(result.data);
+        let message = result.message;
+
+        if (format !== "wav") {
+          const transcoded = await tryTranscodeAudio(outputBytes, format);
+          if (transcoded) {
+            outputBytes = transcoded;
+          } else {
+            outputFormat = "wav";
+            const warning = `${format.toUpperCase()} encoding is not available; exported as WAV instead.`;
+            message = message ? `${message} ${warning}` : warning;
+          }
+        }
+
+        const outputPath = replaceExtension(destination.fsPath, outputFormat);
+        const outputUri = vscode.Uri.file(outputPath);
+
+        progress.report({ increment: 30, message: "Writing to disk..." });
+        await this.writeProjectBytes(outputUri, outputBytes);
+
+        progress.report({ increment: 10, message: "Done" });
+        const info = message
+          ? `VSDAW export to ${outputPath} complete. ${message}`
+          : `VSDAW export to ${outputPath} complete`;
+        this.outputChannel.appendLine(`[export] ${info}`);
+        vscode.window.showInformationMessage(info);
+      },
+    );
   }
 
   private async saveSession(
@@ -848,6 +917,60 @@ export class ProjectManager implements vscode.Disposable {
     this.uriToProjectId.delete(session.uri.toString());
     session.uri = newUri;
     this.uriToProjectId.set(newUri.toString(), session.projectId);
+  }
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const buffer = Buffer.from(base64, "base64");
+  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+function replaceExtension(filePath: string, ext: string): string {
+  const base = path.basename(filePath, path.extname(filePath));
+  return path.join(path.dirname(filePath), `${base}.${ext}`);
+}
+
+interface FfmpegInstance {
+  load: () => Promise<unknown>;
+  writeFile: (path: string, data: unknown) => Promise<unknown>;
+  exec: (args: string[]) => Promise<unknown>;
+  readFile: (path: string) => Promise<unknown>;
+}
+
+async function tryTranscodeAudio(
+  input: Uint8Array,
+  outputFormat: ExportFormat,
+): Promise<Uint8Array | undefined> {
+  if (outputFormat === "wav") {
+    return input;
+  }
+  try {
+    const ffmpegModule = await import("@ffmpeg/ffmpeg");
+    const utilModule = await import("@ffmpeg/util");
+    const FFmpeg = (ffmpegModule as { FFmpeg?: new () => FfmpegInstance }).FFmpeg;
+    const fetchFile = (utilModule as { fetchFile?: (file: Blob) => Promise<Uint8Array> }).fetchFile;
+    if (!FFmpeg || !fetchFile) {
+      return undefined;
+    }
+
+    const ffmpeg = new FFmpeg();
+    await ffmpeg.load();
+    const source = await fetchFile(new Blob([input.slice()]));
+    await ffmpeg.writeFile("input.wav", source);
+
+    const outputExt = outputFormat === "mp3" ? "mp3" : outputFormat === "ogg" ? "ogg" : "flac";
+    await ffmpeg.exec(["-i", "input.wav", `output.${outputExt}`]);
+    const data = await ffmpeg.readFile(`output.${outputExt}`);
+
+    if (data instanceof Uint8Array) {
+      return data;
+    }
+    if (data instanceof ArrayBuffer) {
+      return new Uint8Array(data);
+    }
+    return undefined;
+  } catch {
+    return undefined;
   }
 }
 

@@ -3,6 +3,7 @@ import {
   type DeviceIdPayload,
   type DeviceMovePayload,
   type DeviceParameterPayload,
+  type ExportAudioPayload,
   type ExportRenderPayload,
   type Message,
   MessageType,
@@ -498,6 +499,19 @@ function routeMessage(
       }
       return controller
         .renderExport(opts.format, opts.start, opts.end, opts.fileName, opts.stems)
+        .then((result) => ({ type: "ok" as const, payload: result }))
+        .catch((error: unknown) => ({
+          type: "error" as const,
+          message: error instanceof Error ? error.message : String(error),
+        }));
+    }
+    case MessageType.ExportAudio: {
+      const opts = p as ExportAudioPayload;
+      if (!opts?.format) {
+        return { type: "error", message: "format is required" };
+      }
+      return controller
+        .renderExport(opts.format, opts.start, opts.end, undefined, opts.stems)
         .then((result) => ({ type: "ok" as const, payload: result }))
         .catch((error: unknown) => ({
           type: "error" as const,

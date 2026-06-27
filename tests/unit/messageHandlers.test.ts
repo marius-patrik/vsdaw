@@ -356,6 +356,48 @@ describe("messageHandlers - track operations", () => {
   });
 });
 
+describe("messageHandlers - export", () => {
+  test("ExportRender forwards format, start, end, fileName and stems", async () => {
+    const controller = createMockController();
+    await expectOk(
+      handleMessage(
+        controller,
+        makeMessage(MessageType.ExportRender, {
+          format: "wav",
+          start: 0,
+          end: 100,
+          fileName: "render.wav",
+          stems: true,
+        }),
+      ),
+    );
+    expect(controller.renderExport).toHaveBeenCalledWith("wav", 0, 100, "render.wav", true);
+  });
+
+  test("ExportAudio forwards format, start, end and stems without fileName", async () => {
+    const controller = createMockController();
+    await expectOk(
+      handleMessage(
+        controller,
+        makeMessage(MessageType.ExportAudio, {
+          format: "flac",
+          start: 10,
+          end: 200,
+          stems: false,
+        }),
+      ),
+    );
+    expect(controller.renderExport).toHaveBeenCalledWith("flac", 10, 200, undefined, false);
+  });
+
+  test("ExportAudio returns error when format is missing", async () => {
+    const controller = createMockController();
+    const result = await handleMessage(controller, makeMessage(MessageType.ExportAudio, {}));
+    expect(result.type).toBe("error");
+    expect((result as { message: string }).message).toContain("format is required");
+  });
+});
+
 describe("messageHandlers - engine error handling", () => {
   test("handler catches synchronous controller errors", async () => {
     const controller = createMockController();

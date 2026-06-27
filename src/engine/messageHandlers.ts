@@ -25,6 +25,7 @@ import {
   type RegionMovePayload,
   type RegionResizePayload,
   type RegionSplitPayload,
+  type StateSetPayload,
   type TrackBooleanPayload,
   type TrackColorPayload,
   type TrackCreatePayload,
@@ -507,6 +508,15 @@ function routeMessage(
     // State
     case MessageType.StateGet: {
       return { type: "ok", payload: controller.getState() };
+    }
+    case MessageType.StateSet: {
+      const opts = p as StateSetPayload;
+      if (!opts?.data) {
+        return { type: "error", message: "State data is required" };
+      }
+      const binary = base64ToArrayBuffer(opts.data);
+      controller.loadProject(binary);
+      return { type: "ok" };
     }
 
     default:

@@ -25,3 +25,5 @@ Thumbs.db
 # Bun
 bun.lock
 bun.lockb
+node_modules/
+reviews/

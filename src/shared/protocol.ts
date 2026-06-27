@@ -140,6 +140,8 @@ export enum MessageType {
   DeviceDelete = "device.delete",
   DeviceMove = "device.move",
   DeviceSetParameter = "device.setParameter",
+  DeviceList = "device.list",
+  DeviceGetParameters = "device.getParameters",
 
   PeaksGet = "peaks.get",
 
@@ -238,6 +240,7 @@ export interface TrackInsertPayload {
   trackId: string;
   deviceName: string;
   insertIndex?: number;
+  slot?: DeviceCategory;
 }
 
 export interface TrackInsertRemovePayload {
@@ -355,6 +358,26 @@ export interface DeviceParameterPayload {
   deviceId: string;
   parameter: string;
   value: number | boolean;
+}
+
+export type DeviceCategory = "instrument" | "audio-effect" | "midi-effect";
+
+export interface DeviceListItem {
+  id: string;
+  name: string;
+  category: DeviceCategory;
+}
+
+export interface DeviceListPayload {
+  category?: DeviceCategory;
+}
+
+export interface DeviceParameterDescriptor {
+  name: string;
+  value: number | boolean;
+  min: number | boolean;
+  max: number | boolean;
+  type: "number" | "boolean";
 }
 
 export interface PeaksGetPayload {

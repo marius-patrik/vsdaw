@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { messageBus } from "./messageBus.js";
 import type {
   BrowserNode,
+  DeviceCategory,
+  DeviceParameter,
   HostMessage,
   SelectionState,
   TimePosition,
@@ -28,6 +30,10 @@ export function useViewState(view: ViewName) {
   const [tracks, setTracks] = useState<TrackState[]>([]);
   const [selection, setSelection] = useState<SelectionState>({});
   const [browserRoot, setBrowserRoot] = useState<BrowserNode | null>(null);
+  const [deviceParameters, setDeviceParameters] = useState<{
+    deviceId: string;
+    parameters: DeviceParameter[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const send = useCallback((message: ViewMessage) => {
@@ -61,6 +67,9 @@ export function useViewState(view: ViewName) {
           break;
         case "host/browser":
           setBrowserRoot(message.root);
+          break;
+        case "host/deviceParameters":
+          setDeviceParameters({ deviceId: message.deviceId, parameters: message.parameters });
           break;
         case "host/error":
           setError(message.message);
@@ -98,8 +107,8 @@ export function useViewState(view: ViewName) {
       send({ type: "track/create", trackType, name, color }),
     deleteTrack: (trackId: string) => send({ type: "track/delete", trackId }),
     setColor: (trackId: string, color: string) => send({ type: "track/setColor", trackId, color }),
-    addInsert: (trackId: string, deviceName: string, insertIndex?: number) =>
-      send({ type: "track/addInsert", trackId, deviceName, insertIndex }),
+    addInsert: (trackId: string, deviceName: string, slot?: DeviceCategory, insertIndex?: number) =>
+      send({ type: "track/addInsert", trackId, deviceName, slot, insertIndex }),
   };
 
   const timelineActions = {
@@ -113,6 +122,12 @@ export function useViewState(view: ViewName) {
       send({ type: "mixer/openDevice", trackId, slotIndex }),
   };
 
+  const deviceActions = {
+    getParameters: (deviceId: string) => send({ type: "device/getParameters", deviceId }),
+    setParameter: (deviceId: string, parameter: string, value: number | boolean) =>
+      send({ type: "device/setParameter", deviceId, parameter, value }),
+  };
+
   const browserActions = {
     preview: (nodeId: string) => send({ type: "browser/preview", nodeId }),
     dragStart: (nodeId: string) => send({ type: "browser/dragStart", nodeId }),
@@ -124,6 +139,8 @@ export function useViewState(view: ViewName) {
     delete: () => send({ type: "command/delete" }),
     duplicate: () => send({ type: "command/duplicate" }),
     export: () => send({ type: "command/export" }),
+    importAudio: () => send({ type: "command/importAudio" }),
+    importMidi: () => send({ type: "command/importMidi" }),
     showView: (target: ViewName) => send({ type: "command/show", view: target }),
   };
 
@@ -141,11 +158,13 @@ export function useViewState(view: ViewName) {
     tracks,
     selection,
     browserRoot,
+    deviceParameters,
     error,
     transport,
     trackActions,
     timelineActions,
     mixerActions,
+    deviceActions,
     browserActions,
     commands,
     send,

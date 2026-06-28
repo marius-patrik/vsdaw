@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sg-background: #1e1e1e;
+  --sg-foreground: #d4d4d4;
+  --sg-sidebar-background: #252526;
+  --sg-panel-background: #1e1e1e;
+  --sg-accent: #0e639c;
+  --sg-accent-foreground: #ffffff;
+  --sg-border: #3c3c3c;
+}
+
+.sg-light {
+  --sg-background: #ffffff;
+  --sg-foreground: #3c3c3c;
+  --sg-sidebar-background: #f3f3f3;
+  --sg-panel-background: #ffffff;
+  --sg-accent: #0078d4;
+  --sg-accent-foreground: #ffffff;
+  --sg-border: #e5e5e5;
+}

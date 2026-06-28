@@ -1,7 +1,3 @@
-import type { EngineMessage, ErrorEnvelope } from "@singularity/shared";
+import { PROTOCOL_VERSION } from "@singularity/shared";
 
-export type { EngineMessage, ErrorEnvelope };
-
-export function isErrorEnvelope(envelope: ErrorEnvelope): boolean {
-  return envelope.code.startsWith("ERR_");
-}
+console.log(`Singularity MCP ${PROTOCOL_VERSION}`);

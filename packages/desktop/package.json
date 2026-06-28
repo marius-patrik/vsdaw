@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rsbuild build && tauri build",
-    "dev": "rsbuild dev & tauri dev",
+    "build": "rsbuild build",
+    "dev": "tauri dev",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit"
   },

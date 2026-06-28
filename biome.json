@@ -36,16 +36,11 @@
       "**/node_modules",
       "**/out",
       "**/dist",
-      "src/**",
-      "tests/**",
-      ".vscode-test",
-      "**/coverage",
-      "*.vsix",
-      "bun.lock",
-      "bun.lockb",
-      "packages/*/dist",
+      "archive/**",
       "packages/desktop/src-tauri/target",
-      "packages/desktop/src-tauri/gen"
+      "packages/desktop/src-tauri/gen",
+      "bun.lock",
+      "bun.lockb"
     ]
   }
 }

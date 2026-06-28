@@ -96,9 +96,10 @@ export function serializeEngineFrame(message: EngineMessage): Uint8Array {
   return frame;
 }
 
-export function parseEngineFrames(
-  buffer: Uint8Array,
-): { messages: EngineMessage[]; remainder: Uint8Array } {
+export function parseEngineFrames(buffer: Uint8Array): {
+  messages: EngineMessage[];
+  remainder: Uint8Array;
+} {
   const messages: EngineMessage[] = [];
   let offset = 0;
   while (offset < buffer.length) {

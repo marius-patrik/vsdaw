@@ -1,6 +1,6 @@
 {
   "name": "@singularity/ui",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,22 +10,24 @@
     }
   },
   "scripts": {
-    "build": "rsbuild build",
+    "build": "tsc --build && rsbuild build",
     "dev": "rsbuild dev",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
   },
   "dependencies": {
     "@singularity/shared": "workspace:*",
-    "dockview": "^4.2.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "zustand": "^5.0.14"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.0.0",
     "@rsbuild/plugin-react": "^1.0.0",
+    "@types/jest": "^29.5.14",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.11",
     "typescript": "^5.7.0"
   }
 }

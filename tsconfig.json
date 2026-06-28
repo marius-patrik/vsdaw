@@ -6,6 +6,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -15,8 +17,8 @@
     "isolatedModules": true,
     "outDir": "./out",
     "rootDir": ".",
-    "types": ["bun", "node", "vscode", "jest", "webmidi"]
+    "types": ["bun", "node", "jest"]
   },
-  "include": ["src/**/*", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "out", "dist", "src/engine"]
+  "include": ["packages/*/src/**/*", "scripts/**/*.ts", "e2e/**/*.ts"],
+  "exclude": ["node_modules", "out", "dist", "packages/*/dist", "packages/*/node_modules"]
 }

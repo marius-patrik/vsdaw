@@ -1,11 +1,12 @@
 {
   "name": "@singularity/web",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "rsbuild build",
-    "dev": "rsbuild dev"
+    "dev": "rsbuild dev",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@singularity/shared": "workspace:*",

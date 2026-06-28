@@ -1,121 +1,36 @@
-export type TimeSignature = [number, number];
+import type { z } from "zod";
+import type { EntityIdSchema } from "./schemas/base.js";
+import type {
+  EngineMessageSchema,
+  ErrorCodeSchema,
+  ErrorEnvelopeSchema,
+  EventSchema,
+  MessageSchema,
+  ReplySchema,
+} from "./schemas/envelope.js";
+import type {
+  ChannelRackSchema,
+  MixerSchema,
+  PlaylistSchema,
+  ProjectSchema,
+  ProjectSettingsSchema,
+  RoutingGraphSchema,
+  TimeSignatureSchema,
+} from "./schemas/project.js";
 
-export type TrackType = "audio" | "midi" | "bus" | "master";
+export type EntityId = z.infer<typeof EntityIdSchema>;
 
-export interface Track {
-  id: string;
-  type: TrackType;
-  name: string;
-  color: string;
-  index: number;
-  height?: number;
-  volumeDb: number;
-  pan: number;
-  mute: boolean;
-  solo: boolean;
-  arm: boolean;
-  inputDeviceId?: string;
-  outputTrackId?: string;
-  insertIds: string[];
-  sendIds: string[];
-}
+export type Message = z.infer<typeof MessageSchema>;
+export type Reply = z.infer<typeof ReplySchema>;
+export type Event = z.infer<typeof EventSchema>;
+export type EngineMessage = z.infer<typeof EngineMessageSchema>;
+export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
+export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
-export type RegionType = "audio" | "midi";
-
-export interface Fade {
-  type: "linear" | "exponential" | "logarithmic" | "sCurve";
-  duration: number;
-}
-
-export interface Region {
-  id: string;
-  trackId: string;
-  type: RegionType;
-  name?: string;
-  position: number;
-  duration: number;
-  offset: number;
-  fadeIn: Fade;
-  fadeOut: Fade;
-  audioFileId?: string;
-  sampleId?: string;
-}
-
-export interface Note {
-  id: string;
-  regionId: string;
-  position: number;
-  duration: number;
-  pitch: number;
-  velocity: number;
-}
-
-export interface AutomationTarget {
-  type: "volume" | "pan" | "device";
-  trackId: string;
-  deviceId?: string;
-  parameter?: string;
-}
-
-export interface AutomationLane {
-  id: string;
-  trackId: string;
-  target: AutomationTarget;
-  height?: number;
-}
-
-export interface AutomationPoint {
-  id: string;
-  laneId: string;
-  position: number;
-  value: number;
-}
-
-export interface TransportState {
-  position: number;
-  isPlaying: boolean;
-  isRecording: boolean;
-  bpm: number;
-  timeSignature: TimeSignature;
-  loopEnabled: boolean;
-  loopStart?: number;
-  loopEnd?: number;
-}
-
-export interface ProjectState {
-  projectId: string;
-  name: string;
-  sampleRate: number;
-  bufferSize: number;
-  transport: TransportState;
-  tracks: Track[];
-  regions: Region[];
-  notes: Note[];
-  automationLanes: AutomationLane[];
-  automationPoints: AutomationPoint[];
-  devices: Device[];
-  masterVolumeDb: number;
-}
-
-export interface Device {
-  id: string;
-  name: string;
-  category: "instrument" | "audio-effect" | "midi-effect";
-  vendor?: string;
-  parameters: DeviceParameter[];
-}
-
-export interface DeviceParameter {
-  id: string;
-  name: string;
-  value: number | boolean;
-  min?: number;
-  max?: number;
-  defaultValue?: number | boolean;
-}
-
-export interface Selection {
-  trackId?: string;
-  regionId?: string;
-  noteIds?: string[];
-}
+export type TimeSignature = z.infer<typeof TimeSignatureSchema>;
+export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
+export type ChannelRack = z.infer<typeof ChannelRackSchema>;
+export type Playlist = z.infer<typeof PlaylistSchema>;
+export type Mixer = z.infer<typeof MixerSchema>;
+export type RoutingGraph = z.infer<typeof RoutingGraphSchema>;
+export type Project = z.infer<typeof ProjectSchema>;

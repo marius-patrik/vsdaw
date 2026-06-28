@@ -1,0 +1,33 @@
+{
+  "name": "Dark+",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1E1E1E",
+    "editor.foreground": "#D4D4D4",
+    "sideBar.background": "#252526",
+    "sideBar.foreground": "#CCCCCC",
+    "panel.background": "#1E1E1E",
+    "panel.border": "#3C3C3C",
+    "button.background": "#0E639C",
+    "button.foreground": "#FFFFFF",
+    "focusBorder": "#007FD4",
+    "activityBar.background": "#333333",
+    "activityBar.foreground": "#FFFFFF"
+  },
+  "tokenColors": [
+    {
+      "name": "Comment",
+      "scope": ["comment", "punctuation.definition.comment"],
+      "settings": {
+        "foreground": "#6A9955"
+      }
+    },
+    {
+      "name": "Keyword",
+      "scope": ["keyword", "storage.type", "storage.modifier"],
+      "settings": {
+        "foreground": "#569CD6"
+      }
+    }
+  ]
+}

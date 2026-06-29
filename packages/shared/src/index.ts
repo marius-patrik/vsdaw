@@ -5,3 +5,4 @@ export * from "./schemas/base.js";
 export * from "./schemas/envelope.js";
 export * from "./schemas/project.js";
 export * from "./theme.js";
+export * from "./messages/theme.js";

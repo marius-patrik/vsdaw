@@ -413,27 +413,49 @@ describe("envelope schemas", () => {
     expectValid(ErrorEnvelopeSchema, { code: "ERR_INTERNAL", message: "oops" });
   });
   it("MessageSchema accepts valid message", () => {
-    expectValid(MessageSchema, { id: "msg-1", type: "test", payload: {} });
+    expectValid(MessageSchema, {
+      id: "00000000-0000-0000-0000-000000000001",
+      type: "test",
+      payload: {},
+    });
   });
   it("MessageSchema rejects missing payload", () => {
-    expectInvalid(MessageSchema, { id: "msg-1", type: "test" });
+    expectInvalid(MessageSchema, { id: "00000000-0000-0000-0000-000000000001", type: "test" });
   });
-  it("MessageSchema allows extra keys via passthrough", () => {
-    const parsed = MessageSchema.parse({ id: "msg-1", type: "test", payload: {}, meta: true });
-    expect(parsed.meta).toBe(true);
+  it("MessageSchema rejects extra keys", () => {
+    expectInvalid(MessageSchema, {
+      id: "00000000-0000-0000-0000-000000000001",
+      type: "test",
+      payload: {},
+      meta: true,
+    });
   });
   it("ReplySchema accepts valid reply", () => {
-    expectValid(ReplySchema, { id: "r-1", type: "reply", inReplyTo: "msg-1", success: true });
+    expectValid(ReplySchema, {
+      id: "00000000-0000-0000-0000-000000000001",
+      type: "reply",
+      inReplyTo: "00000000-0000-0000-0000-000000000002",
+      success: true,
+    });
   });
   it("EventSchema accepts valid event", () => {
-    expectValid(EventSchema, { id: "e-1", type: "event", topic: "transport", payload: {} });
+    expectValid(EventSchema, {
+      id: "00000000-0000-0000-0000-000000000003",
+      type: "event",
+      topic: "transport",
+      payload: {},
+    });
   });
   it("EngineMessageSchema accepts valid engine message", () => {
-    expectValid(EngineMessageSchema, { id: "em-1", type: "engine/ping", payload: {} });
+    expectValid(EngineMessageSchema, {
+      id: "00000000-0000-0000-0000-000000000004",
+      type: "engine/ping",
+      payload: {},
+    });
   });
   it("EngineMessageSchema rejects extra keys", () => {
     expectInvalid(EngineMessageSchema, {
-      id: "em-1",
+      id: "00000000-0000-0000-0000-000000000004",
       type: "engine/ping",
       payload: {},
       extra: true,

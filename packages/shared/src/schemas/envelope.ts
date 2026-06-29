@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { PROTOCOL_VERSION } from "../constants.js";
-import { EntityIdSchema } from "./base.js";
 
 export const ErrorCodeSchema = z.enum([
   "ERR_INVALID_MESSAGE",
@@ -21,35 +20,35 @@ export const ErrorEnvelopeSchema = z.object({
 
 export const MessageSchema = z
   .object({
-    id: EntityIdSchema,
+    id: z.string().uuid(),
     type: z.string().min(1).max(128),
     payload: z.unknown().refine((v) => v !== undefined, { message: "payload is required" }),
   })
-  .passthrough();
+  .strict();
 
 export const ReplySchema = z
   .object({
-    id: EntityIdSchema,
+    id: z.string().uuid(),
     type: z.literal("reply"),
-    inReplyTo: EntityIdSchema,
+    inReplyTo: z.string().uuid(),
     success: z.boolean(),
     payload: z.unknown().optional(),
     error: ErrorEnvelopeSchema.optional(),
   })
-  .passthrough();
+  .strict();
 
 export const EventSchema = z
   .object({
-    id: EntityIdSchema,
+    id: z.string().uuid(),
     type: z.literal("event"),
     topic: z.string().min(1).max(256),
     payload: z.unknown().refine((v) => v !== undefined, { message: "payload is required" }),
   })
-  .passthrough();
+  .strict();
 
 export const EngineMessageSchema = z
   .object({
-    id: EntityIdSchema,
+    id: z.string().uuid(),
     type: z.string().min(1).max(128),
     payload: z.unknown().refine((v) => v !== undefined, { message: "payload is required" }),
   })

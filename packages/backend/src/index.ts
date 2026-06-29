@@ -1,4 +1,5 @@
 import websocket from "@fastify/websocket";
+import { validateMessage } from "@singularity/shared";
 import Fastify from "fastify";
 
 export async function buildServer() {
@@ -10,7 +11,15 @@ export async function buildServer() {
   app.get("/ws", { websocket: true }, (connection) => {
     connection.socket.on("message", (raw: Buffer | ArrayBuffer | Buffer[]) => {
       const text = Array.isArray(raw) ? Buffer.concat(raw).toString() : raw.toString();
-      connection.socket.send(JSON.stringify({ echo: text }));
+      try {
+        const parsed = JSON.parse(text);
+        const message = validateMessage(parsed);
+        connection.socket.send(JSON.stringify({ ok: true, type: message.type }));
+      } catch (err) {
+        connection.socket.send(
+          JSON.stringify({ ok: false, error: err instanceof Error ? err.message : "invalid" }),
+        );
+      }
     });
   });
 

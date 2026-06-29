@@ -15,6 +15,7 @@ import {
   validateAssetRef,
   validateClip,
   validateEngineMessage,
+  validateEvent,
   validateMessage,
   validateMixerInsert,
   validateNoteEvent,
@@ -121,13 +122,17 @@ describe("message utilities", () => {
     expect(validateMessage(msg)).toEqual(msg);
   });
   it("createReply returns a valid reply", () => {
-    const reply = createReply("req-1", true, { result: "ok" });
+    const reply = createReply("00000000-0000-0000-0000-000000000001", true, { result: "ok" });
     expect(validateReply(reply)).toEqual(reply);
   });
   it("createEvent returns a valid event", () => {
     const event = createEvent("transport.play", {});
-    expect(event.type).toBe("event");
-    expect(event.topic).toBe("transport.play");
+    expect(validateEvent(event)).toEqual(event);
+  });
+  it("validateEvent rejects invalid event", () => {
+    expect(() =>
+      validateEvent({ id: "not-a-uuid", type: "event", topic: "x", payload: {} }),
+    ).toThrow();
   });
 });
 
@@ -184,12 +189,22 @@ describe("validation helpers", () => {
     ).toBeDefined();
   });
   it("validateEngineMessage accepts valid engine message", () => {
-    expect(validateEngineMessage({ id: "em-1", type: "engine/ping", payload: {} })).toBeDefined();
+    expect(
+      validateEngineMessage({
+        id: "00000000-0000-0000-0000-00000000000a",
+        type: "engine/ping",
+        payload: {},
+      }),
+    ).toBeDefined();
   });
 });
 
 describe("engine frame utilities", () => {
-  const message = { id: "em-1", type: "engine/ping", payload: { hello: "world" } };
+  const message = {
+    id: "00000000-0000-0000-0000-00000000000a",
+    type: "engine/ping",
+    payload: { hello: "world" },
+  };
 
   it("serializeEngineFrame and parseEngineFrames are inverses", () => {
     const frame = serializeEngineFrame(message);
@@ -207,7 +222,11 @@ describe("engine frame utilities", () => {
   });
   it("parseEngineFrames handles multiple frames", () => {
     const frame1 = serializeEngineFrame(message);
-    const frame2 = serializeEngineFrame({ id: "em-2", type: "engine/pong", payload: {} });
+    const frame2 = serializeEngineFrame({
+      id: "00000000-0000-0000-0000-00000000000b",
+      type: "engine/pong",
+      payload: {},
+    });
     const combined = new Uint8Array(frame1.length + frame2.length);
     combined.set(frame1, 0);
     combined.set(frame2, frame1.length);

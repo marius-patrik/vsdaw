@@ -13,9 +13,13 @@
     "build": "tsc --build",
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/routes/__tests__",
+    "lint": "biome check ."
   },
   "dependencies": {
+    "@fastify/cors": "^10.0.0",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/websocket": "^11.0.0",
     "@singularity/shared": "workspace:*",
     "fastify": "^5.0.0",

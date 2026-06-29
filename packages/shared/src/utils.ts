@@ -1,65 +1,61 @@
-import { ENGINE_MAX_PAYLOAD_BYTES, PPQN } from "./constants.js";
+import { ENGINE_MAX_PAYLOAD_BYTES, PPQN, PROTOCOL_VERSION } from "./constants.js";
+import { AssetRefSchema } from "./schemas/asset.js";
 import {
   EngineMessageSchema,
   EventSchema,
   MessageSchema,
   ReplySchema,
 } from "./schemas/envelope.js";
+import { MixerInsertSchema } from "./schemas/mixer.js";
+import { NoteEventSchema } from "./schemas/pattern.js";
+import { ClipSchema } from "./schemas/playlist.js";
 import { ProjectSchema } from "./schemas/project.js";
-import type { EngineMessage, Event, Message, Project, Reply, TimeSignature } from "./types.js";
+import type {
+  BarBeatTick,
+  Clip,
+  EngineMessage,
+  ErrorEnvelope,
+  Event,
+  Message,
+  MixerInsert,
+  NoteEvent,
+  Project,
+  Reply,
+  Sample,
+  Second,
+  Tick,
+  TimeSignature,
+} from "./types.js";
 
-export interface MusicalTime {
-  bars: number;
-  beats: number;
-  ticks: number;
+function generateId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ticksToSeconds(ticks: number, bpm: number, ppqn = PPQN): number {
-  if (!Number.isFinite(ticks) || !Number.isFinite(bpm) || !Number.isFinite(ppqn)) {
-    throw new RangeError("ticks, bpm, and ppqn must be finite");
-  }
-  return (ticks / ppqn) * (60 / bpm);
+export function createMessage<T>(type: string, payload: T): Message {
+  return validateMessage({ id: generateId(), type, payload });
 }
 
-export function secondsToTicks(seconds: number, bpm: number, ppqn = PPQN): number {
-  if (!Number.isFinite(seconds) || !Number.isFinite(bpm) || !Number.isFinite(ppqn)) {
-    throw new RangeError("seconds, bpm, and ppqn must be finite");
-  }
-  return Math.round(seconds * (bpm / 60) * ppqn);
+export function createReply<T>(
+  requestId: string,
+  success: boolean,
+  payload?: T,
+  error?: ErrorEnvelope,
+): Reply {
+  return validateReply({
+    id: generateId(),
+    type: "reply",
+    inReplyTo: requestId,
+    success,
+    payload,
+    error,
+  });
 }
 
-export function ticksToMusicalTime(
-  ticks: number,
-  timeSignature: TimeSignature,
-  ppqn = PPQN,
-): MusicalTime {
-  if (!Number.isFinite(ticks)) {
-    throw new RangeError("ticks must be finite");
-  }
-  const ticksPerBeat = (ppqn * 4) / timeSignature.denominator;
-  const ticksPerBar = ticksPerBeat * timeSignature.numerator;
-  const bars = Math.floor(ticks / ticksPerBar);
-  const remainder = ticks % ticksPerBar;
-  const beats = Math.floor(remainder / ticksPerBeat);
-  const remTicks = remainder % ticksPerBeat;
-  return { bars, beats, ticks: remTicks };
-}
-
-export function musicalTimeToTicks(
-  musicalTime: MusicalTime,
-  timeSignature: TimeSignature,
-  ppqn = PPQN,
-): number {
-  if (
-    !Number.isFinite(musicalTime.bars) ||
-    !Number.isFinite(musicalTime.beats) ||
-    !Number.isFinite(musicalTime.ticks)
-  ) {
-    throw new RangeError("musical time components must be finite");
-  }
-  const ticksPerBeat = (ppqn * 4) / timeSignature.denominator;
-  const ticksPerBar = ticksPerBeat * timeSignature.numerator;
-  return musicalTime.bars * ticksPerBar + musicalTime.beats * ticksPerBeat + musicalTime.ticks;
+export function createEvent<T>(topic: string, payload: T): Event {
+  return validateEvent({ id: generateId(), type: "event", topic, payload });
 }
 
 export function validateMessage(input: unknown): Message {
@@ -80,6 +76,84 @@ export function validateEngineMessage(input: unknown): EngineMessage {
 
 export function validateProject(input: unknown): Project {
   return ProjectSchema.parse(input);
+}
+
+export function isValidProject(input: unknown): input is Project {
+  return ProjectSchema.safeParse(input).success;
+}
+
+export function validateAssetRef(input: unknown) {
+  return AssetRefSchema.parse(input);
+}
+
+export function validateNoteEvent(input: unknown): NoteEvent {
+  return NoteEventSchema.parse(input);
+}
+
+export function validateClip(input: unknown): Clip {
+  return ClipSchema.parse(input);
+}
+
+export function validateMixerInsert(input: unknown): MixerInsert {
+  return MixerInsertSchema.parse(input);
+}
+
+export function ticksToSeconds(ticks: Tick, bpm: number, ppqn = PPQN): Second {
+  if (!Number.isFinite(ticks) || !Number.isFinite(bpm) || !Number.isFinite(ppqn)) {
+    throw new RangeError("ticks, bpm, and ppqn must be finite");
+  }
+  return (ticks / ppqn) * (60 / bpm);
+}
+
+export function secondsToTicks(seconds: Second, bpm: number, ppqn = PPQN): Tick {
+  if (!Number.isFinite(seconds) || !Number.isFinite(bpm) || !Number.isFinite(ppqn)) {
+    throw new RangeError("seconds, bpm, and ppqn must be finite");
+  }
+  return Math.round(seconds * (bpm / 60) * ppqn);
+}
+
+export function samplesToSeconds(samples: Sample, sampleRate: number): Second {
+  if (!Number.isFinite(samples) || !Number.isFinite(sampleRate)) {
+    throw new RangeError("samples and sampleRate must be finite");
+  }
+  return samples / sampleRate;
+}
+
+export function secondsToSamples(seconds: Second, sampleRate: number): Sample {
+  if (!Number.isFinite(seconds) || !Number.isFinite(sampleRate)) {
+    throw new RangeError("seconds and sampleRate must be finite");
+  }
+  return Math.round(seconds * sampleRate);
+}
+
+export function ticksToBarBeatTick(
+  ticks: Tick,
+  timeSignature: TimeSignature,
+  ppqn = PPQN,
+): BarBeatTick {
+  if (!Number.isFinite(ticks)) {
+    throw new RangeError("ticks must be finite");
+  }
+  const ticksPerBeat = (ppqn * 4) / timeSignature.denominator;
+  const ticksPerBar = ticksPerBeat * timeSignature.numerator;
+  const bar = Math.floor(ticks / ticksPerBar);
+  const remainder = ticks % ticksPerBar;
+  const beat = Math.floor(remainder / ticksPerBeat);
+  const tick = remainder % ticksPerBeat;
+  return { bar, beat, tick };
+}
+
+export function barBeatTickToTicks(
+  bbt: BarBeatTick,
+  timeSignature: TimeSignature,
+  ppqn = PPQN,
+): Tick {
+  if (!Number.isFinite(bbt.bar) || !Number.isFinite(bbt.beat) || !Number.isFinite(bbt.tick)) {
+    throw new RangeError("bar, beat, and tick must be finite");
+  }
+  const ticksPerBeat = (ppqn * 4) / timeSignature.denominator;
+  const ticksPerBar = ticksPerBeat * timeSignature.numerator;
+  return bbt.bar * ticksPerBar + bbt.beat * ticksPerBeat + bbt.tick;
 }
 
 export function serializeEngineFrame(message: EngineMessage): Uint8Array {

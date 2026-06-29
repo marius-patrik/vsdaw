@@ -1,12 +1,7 @@
-import { ENGINE_MAX_PAYLOAD_BYTES, PPQN } from "./constants.js";
-import {
-  EngineMessageSchema,
-  EventSchema,
-  MessageSchema,
-  ReplySchema,
-} from "./schemas/envelope.js";
+import { PPQN } from "./constants.js";
+import { EventSchema, MessageSchema, ReplySchema } from "./schemas/envelope.js";
 import { ProjectSchema } from "./schemas/project.js";
-import type { EngineMessage, Event, Message, Project, Reply, TimeSignature } from "./types.js";
+import type { Event, Message, Project, Reply, TimeSignature } from "./types.js";
 
 export interface MusicalTime {
   bars: number;
@@ -74,51 +69,6 @@ export function validateEvent(input: unknown): Event {
   return EventSchema.parse(input);
 }
 
-export function validateEngineMessage(input: unknown): EngineMessage {
-  return EngineMessageSchema.parse(input);
-}
-
 export function validateProject(input: unknown): Project {
   return ProjectSchema.parse(input);
-}
-
-export function serializeEngineFrame(message: EngineMessage): Uint8Array {
-  const validated = EngineMessageSchema.parse(message);
-  const payload = JSON.stringify(validated);
-  const encoded = new TextEncoder().encode(payload);
-  if (encoded.length > ENGINE_MAX_PAYLOAD_BYTES) {
-    throw new Error(`payload exceeds ${ENGINE_MAX_PAYLOAD_BYTES} bytes`);
-  }
-  const frame = new Uint8Array(4 + encoded.length);
-  const view = new DataView(frame.buffer);
-  view.setUint32(0, encoded.length, false);
-  frame.set(encoded, 4);
-  return frame;
-}
-
-export function parseEngineFrames(buffer: Uint8Array): {
-  messages: EngineMessage[];
-  remainder: Uint8Array;
-} {
-  const messages: EngineMessage[] = [];
-  let offset = 0;
-  while (offset < buffer.length) {
-    if (buffer.length - offset < 4) {
-      break;
-    }
-    const view = new DataView(buffer.buffer, buffer.byteOffset + offset, 4);
-    const length = view.getUint32(0, false);
-    if (length > ENGINE_MAX_PAYLOAD_BYTES) {
-      throw new Error(`payload length ${length} exceeds ${ENGINE_MAX_PAYLOAD_BYTES} bytes`);
-    }
-    if (buffer.length - offset < 4 + length) {
-      break;
-    }
-    const payloadBytes = buffer.subarray(offset + 4, offset + 4 + length);
-    const payload = new TextDecoder().decode(payloadBytes);
-    const parsed = JSON.parse(payload);
-    messages.push(validateEngineMessage(parsed));
-    offset += 4 + length;
-  }
-  return { messages, remainder: buffer.subarray(offset) };
 }

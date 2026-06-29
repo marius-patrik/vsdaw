@@ -58,3 +58,16 @@ export const ProjectSchema = z
     assets: z.array(z.unknown()),
   })
   .strict();
+
+export const CreateProjectRequestSchema = z.object({
+  name: z.string().min(1).max(256),
+  templateId: EntityIdSchema.optional(),
+});
+
+export const ProjectMetadataPatchSchema = z.object({
+  name: z.string().min(1).max(256).optional(),
+  bpm: z.number().min(MIN_BPM).max(MAX_BPM).optional(),
+  timeSignature: TimeSignatureSchema.optional(),
+  sampleRate: ProjectSchema.shape.sampleRate.optional(),
+  settings: ProjectSettingsSchema.optional(),
+});

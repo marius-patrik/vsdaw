@@ -10,6 +10,14 @@ export const ErrorCodeSchema = z.enum([
   "ERR_PROJECT_NOT_FOUND",
   "ERR_UNAUTHORIZED_ACTION",
   "ERR_INTERNAL",
+  "ERR_ENGINE_COMMAND_REJECTED",
+  "ERR_MUTATION_CONFLICT",
+  "ERR_BUNDLE_VERSION_MISMATCH",
+  "ERR_FILE_ACCESS_DENIED",
+  "ERR_FILE_NOT_FOUND",
+  "ERR_TOOL_NOT_FOUND",
+  "ERR_CONFIRMATION_REQUIRED",
+  "ERR_BROWSER_NOT_AVAILABLE",
 ]);
 
 export const ErrorEnvelopeSchema = z.object({
@@ -45,11 +53,3 @@ export const EventSchema = z
     payload: z.unknown(),
   })
   .passthrough();
-
-export const EngineMessageSchema = z
-  .object({
-    id: EntityIdSchema,
-    type: z.string().min(1).max(128),
-    payload: z.unknown(),
-  })
-  .strict();

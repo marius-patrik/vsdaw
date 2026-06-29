@@ -1,20 +1,20 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "VSDAW",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "productName": "Singularity",
+  "version": "1.0.0",
+  "identifier": "com.singularity.daw",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "cd .. && rsbuild build"
+    "beforeDevCommand": "bun run --cwd ../.. dev:desktop-ui",
+    "beforeBuildCommand": "bun run rsbuild build"
   },
   "app": {
     "windows": [
       {
-        "title": "VSDAW",
-        "width": 800,
-        "height": 600,
+        "title": "Singularity",
+        "width": 1280,
+        "height": 800,
         "resizable": true,
         "fullscreen": false
       }
@@ -26,15 +26,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": ["sidecars/singularity-engine"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
-    }
+    ]
   }
 }

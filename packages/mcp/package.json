@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/shared",
+  "name": "@singularity/mcp",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -11,12 +11,12 @@
   },
   "scripts": {
     "build": "tsc --build",
-    "dev": "tsc --build --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.24.3"
+    "@singularity/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

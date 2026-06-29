@@ -1,25 +1,23 @@
 {
   "name": "@singularity/ui",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.tsx",
       "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "rsbuild build",
+    "build": "tsc --build",
     "dev": "rsbuild dev",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@singularity/shared": "workspace:*",
-    "dockview": "^4.2.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "zustand": "^5.0.14"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.0.0",

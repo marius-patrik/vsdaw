@@ -6,7 +6,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "types": ["bun", "node"]
+    "types": ["bun", "node", "jest"]
   },
   "include": ["src/**/*"]
 }

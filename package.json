@@ -1,7 +1,7 @@
 {
   "name": "singularity",
-  "version": "0.4.0",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "description": "A full-featured digital audio workstation and creative IDE.",
@@ -10,14 +10,19 @@
     "url": "https://github.com/marius-patrik/singularity.git"
   },
   "workspaces": ["packages/*"],
+  "packageManager": "bun@1.1.0",
   "scripts": {
-    "build": "bun run --filter '*' build",
+    "build": "bun run --filter '@singularity/shared' build && bun run --filter '@singularity/ui' build && bun run --filter '@singularity/web' build && bun run build:desktop && bun run --filter '@singularity/backend' build && bun run --filter '@singularity/cli' build && bun run --filter '@singularity/mcp' build",
+    "build:desktop": "bun run scripts/build.ts desktop",
     "dev": "bun run --filter '*' dev",
+    "dev:desktop": "bun run --filter @singularity/desktop tauri dev",
+    "dev:desktop-ui": "bun run --filter @singularity/web rsbuild dev",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
+    "format:check": "biome format .",
     "prepare": "husky"
   },
   "lint-staged": {

@@ -1,12 +1,13 @@
 {
   "name": "@singularity/desktop",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rsbuild build && tauri build",
-    "dev": "rsbuild dev & tauri dev",
-    "tauri": "tauri"
+    "build": "rsbuild build",
+    "dev": "tauri dev",
+    "tauri": "tauri",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@singularity/shared": "workspace:*",
@@ -17,8 +18,8 @@
   "devDependencies": {
     "@rsbuild/core": "^1.0.0",
     "@rsbuild/plugin-react": "^1.0.0",
-    "@tauri-apps/cli": "^2.0.0",
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/cli": "^2.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "typescript": "^5.7.0"

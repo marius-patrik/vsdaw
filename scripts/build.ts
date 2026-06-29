@@ -4,10 +4,19 @@ import { $ } from "bun";
 
 const root = path.resolve(import.meta.dir, "..");
 const engineDir = path.join(root, "engine");
-const engineBuildDir = path.join(engineDir, "build");
 const desktopTauriDir = path.join(root, "packages", "desktop", "src-tauri");
 const sidecarDir = path.join(desktopTauriDir, "sidecars");
 const sidecarBase = "singularity-engine";
+
+function getHostPreset(): string {
+  if (process.platform === "darwin") {
+    return process.arch === "arm64" ? "macos-arm64-release" : "macos-x64-release";
+  }
+  if (process.platform === "linux") {
+    return "linux-x64-release";
+  }
+  throw new Error(`Unsupported platform: ${process.platform}`);
+}
 
 function getTargetTriple(): string {
   const platform = process.platform;
@@ -42,16 +51,20 @@ function getTargetTriple(): string {
 }
 
 async function buildEngine() {
-  console.log("Building engine sidecar...");
-  await $`cmake -S ${engineDir} -B ${engineBuildDir}`.cwd(root);
-  await $`cmake --build ${engineBuildDir}`.cwd(root);
+  const preset = getHostPreset();
+  console.log(`Building engine sidecar with preset: ${preset}`);
+  await $`bun run build:engine --target ${preset}`.cwd(root);
 }
 
 async function copySidecar() {
   console.log("Copying engine sidecar into Tauri sidecars directory...");
   fs.mkdirSync(sidecarDir, { recursive: true });
 
-  const source = path.join(engineBuildDir, sidecarBase);
+  const preset = getHostPreset();
+  const engineBuildDir = path.join(engineDir, "build", preset);
+  const binaryName = process.platform === "win32" ? "singularity-engine.exe" : "singularity-engine";
+  const source = path.join(engineBuildDir, binaryName);
+
   if (!fs.existsSync(source)) {
     throw new Error(`Engine binary not found: ${source}`);
   }

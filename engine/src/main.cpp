@@ -28,13 +28,6 @@ int main(int argc, char* argv[]) {
 
     std::cout << "SINGULARITY_PORT=" << engine.getCommandServerPort() << std::endl;
 
-    // Broadcast engine.ready after the listening socket is bound.
-    engine.broadcastEvent({
-        {"id", juce::Uuid().toString().toStdString()},
-        {"type", "engine.ready"},
-        {"payload", {{"version", "1.0.0"}}}
-    });
-
     while (engine.isRunning()) {
         juce::MessageManager::getInstance()->runDispatchLoopUntil(100);
     }

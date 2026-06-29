@@ -141,9 +141,10 @@ void CommandServer::handleCommand(const nlohmann::json& cmd, juce::StreamingSock
     if (isRealtimeCommand(type)) {
         if (!engine_.getCommandQueue().push(cmd)) {
             nlohmann::json response = {
-                {"id", cmd.value("id", "")},
-                {"type", type},
-                {"payload", {{"error", "command queue full"}}}
+                {"id", juce::Uuid().toString().toStdString()},
+                {"inReplyTo", cmd.value("id", "")},
+                {"success", false},
+                {"error", {{"code", "ERR_ENGINE_COMMAND_REJECTED"}, {"message", "command queue full"}}}
             };
             writeFrame(socket, response);
         }

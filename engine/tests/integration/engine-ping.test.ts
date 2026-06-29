@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import * as net from "node:net";
 import * as path from "node:path";
+
+interface EngineReply<T = unknown> {
+  id: string;
+  inReplyTo: string;
+  success: boolean;
+  payload?: T;
+  error?: { code: string; message: string };
+}
 
 function getEngineBinary(): string {
   const fromEnv = process.env.ENGINE_BINARY;
@@ -60,18 +69,15 @@ function readFrame(socket: net.Socket): Promise<unknown> {
   });
 }
 
-async function withEngine<T>(fn: (port: number, socket: net.Socket) => Promise<T>): Promise<T> {
-  const binary = getEngineBinary();
-  const proc = spawn(binary, ["--port", "0"], { stdio: ["ignore", "pipe", "pipe"] });
-
-  let port = 0;
-  const portPromise = new Promise<void>((resolve, reject) => {
+async function waitForPort(proc: ChildProcess): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let port = 0;
     proc.stdout?.on("data", (data: Buffer) => {
       const text = data.toString("utf8");
       const match = text.match(/SINGULARITY_PORT=(\d+)/);
       if (match) {
         port = Number.parseInt(match[1], 10);
-        resolve();
+        resolve(port);
       }
     });
     proc.on("error", reject);
@@ -79,52 +85,43 @@ async function withEngine<T>(fn: (port: number, socket: net.Socket) => Promise<T
       if (port === 0) reject(new Error(`Engine exited before binding (code ${code})`));
     });
   });
+}
 
-  try {
-    await portPromise;
-  } catch (err) {
-    proc.kill();
-    throw err;
-  }
+describe("singularity-engine integration", () => {
+  test("engine starts, prints SINGULARITY_PORT and responds to engine.ping", async () => {
+    const binary = getEngineBinary();
+    const proc = spawn(binary, ["--port", "0"], { stdio: ["ignore", "pipe", "pipe"] });
 
-  const socket = net.createConnection({ host: "127.0.0.1", port });
-  await new Promise<void>((resolve, reject) => {
-    socket.once("connect", resolve);
-    socket.once("error", reject);
-  });
-
-  try {
-    return await fn(port, socket);
-  } finally {
+    let socket: net.Socket | undefined;
     try {
+      const port = await waitForPort(proc);
+      socket = net.createConnection({ host: "127.0.0.1", port });
+      await new Promise<void>((resolve, reject) => {
+        socket?.once("connect", resolve);
+        socket?.once("error", reject);
+      });
+
+      const id = crypto.randomUUID();
+      await sendFrame(socket, { id, type: "engine.ping", payload: {} });
+      const response = (await readFrame(socket)) as EngineReply<{ version: string }>;
+      expect(response.inReplyTo).toBe(id);
+      expect(response.success).toBe(true);
+      expect(response.payload?.version).toMatch(/^\d+\.\d+\.\d+/);
+
       await sendFrame(socket, {
         id: crypto.randomUUID(),
         type: "engine.shutdown",
         payload: { force: false },
       });
+      const exitCode = await new Promise<number | null>((resolve) => {
+        proc.on("exit", resolve);
+        setTimeout(() => resolve(null), 2000);
+      });
+      expect(exitCode).toBe(0);
+    } finally {
+      socket?.destroy();
+      proc.kill();
       await new Promise((resolve) => setTimeout(resolve, 100));
-    } catch {
-      // Ignore shutdown errors.
     }
-    socket.destroy();
-    proc.kill();
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-}
-
-describe("singularity-engine integration", () => {
-  test("engine starts, prints SINGULARITY_PORT and responds to engine.ping", async () => {
-    await withEngine(async (_port, socket) => {
-      const id = crypto.randomUUID();
-      await sendFrame(socket, { id, type: "engine.ping", payload: {} });
-      const response = (await readFrame(socket)) as {
-        id: string;
-        type: string;
-        payload: { version: string };
-      };
-      expect(response.id).toBe(id);
-      expect(response.type).toBe("engine.ping");
-      expect(response.payload.version).toMatch(/^\d+\.\d+\.\d+/);
-    });
   });
 });

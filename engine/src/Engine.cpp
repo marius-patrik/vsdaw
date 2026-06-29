@@ -71,11 +71,15 @@ uint16_t Engine::getCommandServerPort() const noexcept {
 }
 
 void Engine::shutdown() {
-    const bool wasRunning = running_.exchange(false, std::memory_order_acq_rel);
-    if (!wasRunning) {
+    if (shutdownStarted_.exchange(true, std::memory_order_acq_rel)) {
+        // Shutdown already in progress; wait for it to finish.
+        while (!shutdownComplete_.load(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
         return;
     }
 
+    running_.store(false, std::memory_order_release);
     shutdownRequested_.store(true, std::memory_order_release);
     stopAudio();
 
@@ -100,6 +104,8 @@ void Engine::shutdown() {
         deviceManager_->closeAudioDevice();
         deviceManager_.reset();
     }
+
+    shutdownComplete_.store(true, std::memory_order_release);
 }
 
 void Engine::runBroadcaster() {
@@ -110,22 +116,14 @@ void Engine::runBroadcaster() {
         const int64_t last = lastBroadcastedSamples_.load(std::memory_order_relaxed);
         if (samples != last) {
             lastBroadcastedSamples_.store(samples, std::memory_order_relaxed);
-            broadcastEvent({
-                {"id", generateId()},
-                {"type", "transport.positionChanged"},
-                {"payload", {{"position", positionToJson(pos)}}}
-            });
+            broadcastEvent(makeEvent("transport", {{"position", positionToJson(pos)}}));
         }
 
         const int xruns = xrunCount_.load(std::memory_order_relaxed);
         const int lastXruns = lastBroadcastedXruns_.load(std::memory_order_relaxed);
         if (xruns != lastXruns) {
             lastBroadcastedXruns_.store(xruns, std::memory_order_relaxed);
-            broadcastEvent({
-                {"id", generateId()},
-                {"type", "audio.xrun"},
-                {"payload", {{"count", xruns}}}
-            });
+            broadcastEvent(makeEvent("error", {{"count", xruns}}));
         }
 
         std::this_thread::sleep_for(33ms);
@@ -148,26 +146,44 @@ void Engine::onMeterBatch(const std::vector<MeterSample>& meters) {
             {"clipped", m.clipped}
         });
     }
-    broadcastEvent({
-        {"id", generateId()},
-        {"type", "meters.batch"},
-        {"payload", {
-            {"meters", meterArray},
-            {"timestampSamples", transport_->getPosition().samples}
-        }}
-    });
+    broadcastEvent(makeEvent("meter", {
+        {"meters", meterArray},
+        {"timestampSamples", transport_->getPosition().samples}
+    }));
 }
 
-nlohmann::json Engine::makeResponse(const nlohmann::json& cmd, const nlohmann::json& payload) const {
+nlohmann::json Engine::makeReply(const nlohmann::json& cmd, bool success, const nlohmann::json& payload) const {
+    nlohmann::json reply = {
+        {"id", generateId()},
+        {"inReplyTo", cmd.value("id", "")},
+        {"success", success}
+    };
+    if (!payload.is_null()) {
+        reply["payload"] = payload;
+    }
+    return reply;
+}
+
+nlohmann::json Engine::makeErrorReply(const nlohmann::json& cmd, const std::string& code, const std::string& message) const {
     return {
-        {"id", cmd.value("id", "")},
-        {"type", cmd.value("type", "")},
+        {"id", generateId()},
+        {"inReplyTo", cmd.value("id", "")},
+        {"success", false},
+        {"error", {{"code", code}, {"message", message}}}
+    };
+}
+
+nlohmann::json Engine::makeEvent(const std::string& topic, const nlohmann::json& payload) const {
+    return {
+        {"id", generateId()},
+        {"type", "event"},
+        {"topic", topic},
         {"payload", payload}
     };
 }
 
-nlohmann::json Engine::makeError(const nlohmann::json& cmd, const std::string& message) const {
-    return makeResponse(cmd, {{"error", message}});
+void Engine::broadcastError(const std::string& code, const std::string& message) {
+    broadcastEvent(makeEvent("error", {{"code", code}, {"message", message}}));
 }
 
 nlohmann::json Engine::handleImmediateCommand(const nlohmann::json& cmd) {
@@ -180,25 +196,27 @@ nlohmann::json Engine::handleImmediateCommand(const nlohmann::json& cmd) {
     if (type == "audio.setDevice") return handleAudioSetDevice(cmd);
     if (type == "audio.start") return handleAudioStart(cmd);
     if (type == "audio.stop") return handleAudioStop(cmd);
-    return makeError(cmd, "unknown command type");
+    return makeErrorReply(cmd, "ERR_UNKNOWN_TYPE", "unknown command type");
 }
 
 nlohmann::json Engine::handleEnginePing(const nlohmann::json& cmd) {
-    return makeResponse(cmd, {
+    return makeReply(cmd, true, {
         {"version", "1.0.0"},
         {"build", "juce-8.0.4"}
     });
 }
 
 nlohmann::json Engine::handleEngineShutdown(const nlohmann::json& cmd) {
-    nlohmann::json response = makeResponse(cmd, {{"ok", true}});
+    // Defer full teardown to the thread that owns the message loop; do not
+    // call shutdown() from the CommandServer thread because that would try to
+    // join the current thread.
     shutdownRequested_.store(true, std::memory_order_release);
     running_.store(false, std::memory_order_release);
-    return response;
+    return makeReply(cmd, true, {{"ok", true}});
 }
 
 nlohmann::json Engine::handleEngineGetStats(const nlohmann::json& cmd) {
-    return makeResponse(cmd, {
+    return makeReply(cmd, true, {
         {"cpuPercent", std::round(cpuPercent_.load(std::memory_order_relaxed) * 100.0) / 100.0},
         {"xruns", xrunCount_.load(std::memory_order_relaxed)}
     });
@@ -219,16 +237,16 @@ nlohmann::json Engine::handleAudioEnumerateDevices(const nlohmann::json& cmd) {
             {"outputChannels", d.outputChannels}
         });
     }
-    return makeResponse(cmd, {{"devices", array}});
+    return makeReply(cmd, true, {{"devices", array}});
 }
 
 nlohmann::json Engine::handleAudioGetCurrentDevice(const nlohmann::json& cmd) {
     auto* device = deviceManager_->getCurrentAudioDevice();
     if (device == nullptr) {
-        return makeResponse(cmd, nullptr);
+        return makeReply(cmd, true, nullptr);
     }
     const double latencyMs = device->getOutputLatencyInSamples() / device->getCurrentSampleRate() * 1000.0;
-    return makeResponse(cmd, {
+    return makeReply(cmd, true, {
         {"config", {
             {"deviceId", device->getName().toStdString()},
             {"sampleRate", device->getCurrentSampleRate()},
@@ -247,26 +265,31 @@ nlohmann::json Engine::handleAudioSetDevice(const nlohmann::json& cmd) {
     config.bufferSize = configJson.value("bufferSize", 512);
 
     if (config.deviceId.empty()) {
-        return makeError(cmd, "missing deviceId");
+        return makeErrorReply(cmd, "ERR_INVALID_MESSAGE", "missing deviceId");
     }
 
     if (!setDevice(config)) {
-        return makeError(cmd, "failed to set device");
+        broadcastError("ERR_INTERNAL", "failed to set audio device");
+        return makeErrorReply(cmd, "ERR_INTERNAL", "failed to set device");
     }
 
     auto* device = deviceManager_->getCurrentAudioDevice();
     const double latencyMs = (device != nullptr)
                                  ? device->getOutputLatencyInSamples() / device->getCurrentSampleRate() * 1000.0
                                  : 0.0;
-    return makeResponse(cmd, {{"ok", true}, {"latencyMs", latencyMs}});
+    return makeReply(cmd, true, {{"ok", true}, {"latencyMs", latencyMs}});
 }
 
 nlohmann::json Engine::handleAudioStart(const nlohmann::json& cmd) {
-    return makeResponse(cmd, {{"ok", startAudio()}});
+    const bool ok = startAudio();
+    if (!ok) {
+        broadcastError("ERR_INTERNAL", "failed to start audio");
+    }
+    return makeReply(cmd, ok, {{"ok", ok}});
 }
 
 nlohmann::json Engine::handleAudioStop(const nlohmann::json& cmd) {
-    return makeResponse(cmd, {{"ok", stopAudio()}});
+    return makeReply(cmd, true, {{"ok", stopAudio()}});
 }
 
 std::vector<AudioDeviceInfo> Engine::enumerateDevices() const {
@@ -409,35 +432,30 @@ void Engine::processCommands() {
         const std::string type = cmd.value("type", "");
         const auto& payload = cmd.value("payload", nlohmann::json::object());
 
-        nlohmann::json response = cmd;
-        response["payload"] = nlohmann::json::object();
+        nlohmann::json reply;
 
         auto broadcastState = [this](TransportState state) {
-            broadcastEvent({
-                {"id", generateId()},
-                {"type", "transport.stateChanged"},
-                {"payload", {{"state", transportStateToString(state)}}}
-            });
+            broadcastEvent(makeEvent("transport", {{"state", transportStateToString(state)}}));
         };
 
         if (type == "transport.play") {
             transport_->play(payload.value("fromStart", false));
-            response["payload"] = {{"state", transportStateToString(transport_->getState())}};
+            reply = makeReply(cmd, true, {{"state", transportStateToString(transport_->getState())}});
             broadcastState(transport_->getState());
         } else if (type == "transport.stop") {
             transport_->stop(payload.value("rewind", false));
-            response["payload"] = {
+            reply = makeReply(cmd, true, {
                 {"state", transportStateToString(transport_->getState())},
                 {"position", positionToJson(transport_->getPosition())}
-            };
+            });
             broadcastState(transport_->getState());
         } else if (type == "transport.pause") {
             transport_->pause();
-            response["payload"] = {{"state", transportStateToString(transport_->getState())}};
+            reply = makeReply(cmd, true, {{"state", transportStateToString(transport_->getState())}});
             broadcastState(transport_->getState());
         } else if (type == "transport.record") {
             transport_->record(payload.value("fromStart", false));
-            response["payload"] = {{"state", transportStateToString(transport_->getState())}};
+            reply = makeReply(cmd, true, {{"state", transportStateToString(transport_->getState())}});
             broadcastState(transport_->getState());
         } else if (type == "transport.seek") {
             if (payload.contains("samples")) {
@@ -445,55 +463,55 @@ void Engine::processCommands() {
             } else if (payload.contains("ticks")) {
                 transport_->seekToTicks(payload["ticks"].get<int64_t>());
             }
-            response["payload"] = {{"position", positionToJson(transport_->getPosition())}};
+            reply = makeReply(cmd, true, {{"position", positionToJson(transport_->getPosition())}});
         } else if (type == "transport.setLoop") {
             transport_->setLoop(
                 payload.value("enabled", false),
                 payload.value("startSamples", 0),
                 payload.value("endSamples", 0));
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "transport.setTempo") {
             transport_->setTempo(payload.value("bpm", kDefaultBPM));
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "transport.setTimeSignature") {
             transport_->setTimeSignature(payload.value("numerator", 4), payload.value("denominator", 4));
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "transport.setSongMode") {
             transport_->setSongMode(payload.value("songMode", false));
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "project.load") {
             if (payload.contains("project")) {
                 loadProject(payload["project"]);
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "project.unload") {
             unloadProject();
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "mixer.setInsertVolume") {
             if (project_) {
                 project_->getMixer().setInsertVolume(payload.value("insertId", ""), payload.value("volumeDb", 0.0f));
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "mixer.setInsertPan") {
             if (project_) {
                 project_->getMixer().setInsertPan(payload.value("insertId", ""), payload.value("pan", 0.0f));
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "mixer.setInsertMute") {
             if (project_) {
                 project_->getMixer().setInsertMute(payload.value("insertId", ""), payload.value("mute", false));
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "mixer.setInsertSolo") {
             if (project_) {
                 project_->getMixer().setInsertSolo(payload.value("insertId", ""), payload.value("solo", false));
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "channel.setOutput") {
             if (project_) {
                 project_->getChannelRack().setChannelOutput(payload.value("channelId", ""), payload.value("targetId", ""));
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "pattern.setChannelData") {
             if (project_ && payload.contains("patternId")) {
                 auto* pattern = project_->getPattern(payload["patternId"].get<std::string>());
@@ -501,22 +519,22 @@ void Engine::processCommands() {
                     pattern->setChannelData(payload["channelId"].get<std::string>(), payload["data"]);
                 }
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "playlist.addClip") {
             if (project_ && payload.contains("clip")) {
                 project_->getPlaylist().addClip(payload["clip"]);
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else if (type == "playlist.removeClip") {
             if (project_) {
                 project_->getPlaylist().removeClip(payload.value("clipId", ""));
             }
-            response["payload"] = {{"ok", true}};
+            reply = makeReply(cmd, true, {{"ok", true}});
         } else {
-            response["payload"] = {{"error", "unknown realtime command"}};
+            reply = makeErrorReply(cmd, "ERR_UNKNOWN_TYPE", "unknown realtime command");
         }
 
-        broadcastEvent(response);
+        broadcastEvent(reply);
     }
 }
 

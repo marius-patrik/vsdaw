@@ -61,6 +61,8 @@ private:
 
     std::atomic<bool> running_{false};
     std::atomic<bool> shutdownRequested_{false};
+    std::atomic<bool> shutdownStarted_{false};
+    std::atomic<bool> shutdownComplete_{false};
     std::atomic<int> xrunCount_{0};
     std::atomic<double> cpuPercent_{0.0};
     std::atomic<int64_t> lastBroadcastedSamples_{-1};
@@ -69,8 +71,10 @@ private:
     void runBroadcaster();
     void processCommands();
 
-    nlohmann::json makeResponse(const nlohmann::json& cmd, const nlohmann::json& payload) const;
-    nlohmann::json makeError(const nlohmann::json& cmd, const std::string& message) const;
+    nlohmann::json makeReply(const nlohmann::json& cmd, bool success, const nlohmann::json& payload) const;
+    nlohmann::json makeErrorReply(const nlohmann::json& cmd, const std::string& code, const std::string& message) const;
+    nlohmann::json makeEvent(const std::string& topic, const nlohmann::json& payload) const;
+    void broadcastError(const std::string& code, const std::string& message);
 
     nlohmann::json handleEnginePing(const nlohmann::json& cmd);
     nlohmann::json handleEngineShutdown(const nlohmann::json& cmd);

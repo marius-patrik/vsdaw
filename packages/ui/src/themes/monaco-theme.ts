@@ -9,7 +9,7 @@ export function toMonacoBase(theme: VsCodeTheme): "vs" | "vs-dark" | "hc-black" 
       return "hc-black";
     case "hcLight":
       return "hc-light";
-    default:
+    case "dark":
       return "vs-dark";
   }
 }

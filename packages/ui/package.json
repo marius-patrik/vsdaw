@@ -19,10 +19,13 @@
     "dev": "tsc --build tsconfig.build.json --watch",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
-    "test": "bun test src/__tests__"
+    "test": "bun test --path-ignore-patterns=dist src"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
     "@singularity/shared": "workspace:*",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.460.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

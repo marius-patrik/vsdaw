@@ -1,14 +1,14 @@
 import { type VsCodeTheme, appColorTokenSchema, vsCodeThemeSchema } from "@singularity/shared";
-import darkPlus from "../themes/dark-plus.json" with { type: "json" };
-import dracula from "../themes/dracula.json" with { type: "json" };
-import lightPlus from "../themes/light-plus.json" with { type: "json" };
+import darkPlus from "../themes/built-in/dark-plus.json";
+import dracula from "../themes/built-in/dracula.json";
+import lightPlus from "../themes/built-in/light-plus.json";
+import oneDarkPro from "../themes/built-in/one-dark-pro.json";
 import {
   appTokensToCssVariables,
   slugifyThemeId,
   toMonacoBase,
   toMonacoThemeData,
 } from "../themes/monaco-theme.js";
-import oneDarkPro from "../themes/one-dark-pro.json" with { type: "json" };
 import {
   APP_TOKEN_FALLBACKS,
   VS_CODE_TO_APP_TOKEN_MAP,

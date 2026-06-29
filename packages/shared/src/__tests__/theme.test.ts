@@ -7,7 +7,7 @@ import {
   themeSettingsSchema,
   uiScaleSchema,
   vsCodeThemeSchema,
-} from "../index.js";
+} from "../theme.js";
 
 const validVsCodeTheme = {
   name: "Dark+",
@@ -53,29 +53,61 @@ describe("theme schemas", () => {
     const result = vsCodeThemeSchema.safeParse(validVsCodeTheme);
     expect(result.success).toBe(true);
   });
+
   it("vsCodeThemeSchema rejects missing name", () => {
     const result = vsCodeThemeSchema.safeParse({ type: "dark", colors: {} });
     expect(result.success).toBe(false);
   });
+
+  it("validates a VS Code theme with tokenColors", () => {
+    const theme = {
+      name: "Dark+",
+      type: "dark",
+      colors: { "editor.background": "#1e1e1e" },
+      tokenColors: [{ scope: ["comment"], settings: { foreground: "#6a9955" } }],
+    };
+    expect(() => vsCodeThemeSchema.parse(theme)).not.toThrow();
+  });
+
+  it("rejects an invalid VS Code theme type", () => {
+    expect(() => vsCodeThemeSchema.parse({ name: "Bad", type: "blue", colors: {} })).toThrow();
+  });
+
   it("uiScaleSchema accepts valid scales", () => {
     expect(uiScaleSchema.safeParse("100").success).toBe(true);
   });
+
   it("uiScaleSchema rejects invalid scale", () => {
     expect(uiScaleSchema.safeParse("110").success).toBe(false);
+    expect(() => uiScaleSchema.parse("99")).toThrow();
   });
+
   it("appColorTokenSchema accepts valid tokens", () => {
     expect(appColorTokenSchema.safeParse(validColorTokens).success).toBe(true);
+    expect(() => appColorTokenSchema.parse(validColorTokens)).not.toThrow();
   });
+
   it("appColorTokenSchema rejects missing token", () => {
     const { background, ...rest } = validColorTokens;
     expect(appColorTokenSchema.safeParse(rest).success).toBe(false);
   });
+
   it("staticTokenSchema accepts valid static tokens", () => {
     expect(
       staticTokenSchema.safeParse({ space: {}, size: {}, radius: {}, shadow: {}, font: {} })
         .success,
     ).toBe(true);
+    expect(() =>
+      staticTokenSchema.parse({
+        space: { "0": "0", "1": "0.25rem" },
+        size: { toolbarHeight: "2.75rem" },
+        radius: { sm: "0.25rem" },
+        shadow: { sm: "none" },
+        font: { base: "1rem" },
+      }),
+    ).not.toThrow();
   });
+
   it("appTokensSchema accepts valid tokens", () => {
     expect(
       appTokensSchema.safeParse({
@@ -84,23 +116,20 @@ describe("theme schemas", () => {
       }).success,
     ).toBe(true);
   });
-  it("themeRecordSchema accepts valid record", () => {
-    expect(
-      themeRecordSchema.safeParse({
-        id: "dark-plus",
-        name: "Dark+",
-        type: "dark",
-        source: "built-in",
-      }).success,
-    ).toBe(true);
+
+  it("validates theme record", () => {
+    expect(() =>
+      themeRecordSchema.parse({ id: "dark-plus", name: "Dark+", type: "dark", source: "built-in" }),
+    ).not.toThrow();
   });
-  it("themeSettingsSchema accepts valid settings", () => {
-    expect(
-      themeSettingsSchema.safeParse({
+
+  it("validates theme settings", () => {
+    expect(() =>
+      themeSettingsSchema.parse({
         activeThemeId: "dark-plus",
         uiScale: "100",
         themes: [{ id: "dark-plus", name: "Dark+", type: "dark", source: "built-in" }],
-      }).success,
-    ).toBe(true);
+      }),
+    ).not.toThrow();
   });
 });

@@ -1,0 +1,52 @@
+{
+  "name": "One Dark Pro",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#282C34",
+    "editor.foreground": "#ABB2BF",
+    "sideBar.background": "#21252B",
+    "sideBar.foreground": "#ABB2BF",
+    "sideBar.border": "#3E4451",
+    "activityBar.background": "#21252B",
+    "activityBar.foreground": "#ABB2BF",
+    "activityBar.border": "#3E4451",
+    "list.inactiveSelectionBackground": "#2C313A",
+    "editor.selectionHighlightBackground": "#2C313A",
+    "input.background": "#1D2026",
+    "dropdown.background": "#1D2026",
+    "panel.border": "#3E4451",
+    "editorGroup.border": "#3E4451",
+    "tree.indentGuidesStroke": "#3E4451",
+    "editor.lineHighlightBackground": "#2C313C",
+    "focusBorder": "#528BFF",
+    "button.background": "#4D78CC",
+    "button.foreground": "#FFFFFF",
+    "button.hoverBackground": "#6087D2",
+    "errorForeground": "#E06C75",
+    "gitDecoration.deletedResourceForeground": "#E06C75",
+    "editorWarning.foreground": "#E5C07B",
+    "terminal.ansiYellow": "#E5C07B",
+    "terminal.ansiGreen": "#98C379",
+    "gitDecoration.addedResourceForeground": "#98C379",
+    "terminal.ansiCyan": "#56B6C2",
+    "editorInfo.foreground": "#56B6C2",
+    "foreground": "#ABB2BF",
+    "descriptionForeground": "#828997",
+    "disabledForeground": "#5C6370",
+    "terminal.ansiRed": "#E06C75",
+    "editor.selectionBackground": "#3E4451",
+    "editor.findMatchHighlightBackground": "#5C6370"
+  },
+  "tokenColors": [
+    {
+      "name": "Comment",
+      "scope": ["comment"],
+      "settings": { "foreground": "#5C6370" }
+    },
+    {
+      "name": "Keyword",
+      "scope": ["keyword"],
+      "settings": { "foreground": "#C678DD" }
+    }
+  ]
+}

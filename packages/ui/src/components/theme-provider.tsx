@@ -1,11 +1,12 @@
+import type { AppColorTokens, AppTokens, VsCodeTheme } from "@singularity/shared";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { AppColorTokens, VsCodeTheme } from "../themes/vscode.js";
-import { convertVsCodeTheme } from "../themes/vscode.js";
+import { resolveAppTokens } from "../themes/resolve-tokens.js";
+import { STATIC_TOKENS } from "../themes/static-tokens.js";
 import "../styles/index.css";
 
 export interface ThemeContextValue {
   theme: VsCodeTheme;
-  tokens: AppColorTokens;
+  tokens: AppTokens;
   setTheme: (theme: VsCodeTheme) => void;
 }
 
@@ -16,15 +17,25 @@ export interface ThemeProviderProps {
   initialTheme: VsCodeTheme;
 }
 
-function applyTokensToRoot(tokens: AppColorTokens): void {
+function applyColorTokensToRoot(tokens: AppColorTokens): void {
   const root = document.documentElement;
-  root.style.setProperty("--sg-background", tokens.background);
-  root.style.setProperty("--sg-foreground", tokens.foreground);
-  root.style.setProperty("--sg-sidebar-background", tokens.sidebarBackground);
-  root.style.setProperty("--sg-panel-background", tokens.panelBackground);
-  root.style.setProperty("--sg-accent", tokens.accent);
-  root.style.setProperty("--sg-accent-foreground", tokens.accentForeground);
-  root.style.setProperty("--sg-border", tokens.border);
+  for (const [key, value] of Object.entries(tokens)) {
+    const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+    root.style.setProperty(`--sg-${cssKey}`, value);
+  }
+}
+
+function applyStaticTokensToRoot(staticTokens: AppTokens["static"]): void {
+  const root = document.documentElement;
+  for (const [category, values] of Object.entries(staticTokens)) {
+    for (const [key, value] of Object.entries(values)) {
+      const cssKey = key
+        .replace(/\./g, "-")
+        .replace(/([A-Z])/g, "-$1")
+        .toLowerCase();
+      root.style.setProperty(`--sg-${category}-${cssKey}`, value);
+    }
+  }
 }
 
 export function ThemeProvider({ children, initialTheme }: ThemeProviderProps): React.ReactElement {
@@ -34,12 +45,18 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps): R
     setThemeState(next);
   }, []);
 
-  const tokens = useMemo(() => convertVsCodeTheme(theme), [theme]);
+  const colorTokens = useMemo(() => resolveAppTokens(theme), [theme]);
+
+  const tokens = useMemo<AppTokens>(
+    () => ({ colors: colorTokens, static: STATIC_TOKENS }),
+    [colorTokens],
+  );
 
   useEffect(() => {
-    applyTokensToRoot(tokens);
+    applyColorTokensToRoot(colorTokens);
+    applyStaticTokensToRoot(STATIC_TOKENS);
     document.documentElement.classList.toggle("sg-light", theme.type === "light");
-  }, [tokens, theme.type]);
+  }, [colorTokens, theme.type]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({ theme, tokens, setTheme }),

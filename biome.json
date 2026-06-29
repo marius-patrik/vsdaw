@@ -40,6 +40,7 @@
       "packages/desktop/src-tauri/target",
       "packages/desktop/src-tauri/gen",
       "engine/build",
+      "engine/third_party",
       "bun.lock",
       "bun.lockb"
     ]

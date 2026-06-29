@@ -11,6 +11,9 @@ export default defineConfig({
   html: {
     template: "./public/index.html",
   },
+  server: {
+    port: 3000,
+  },
   output: {
     target: "web",
     sourceMap: {

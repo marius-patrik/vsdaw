@@ -12,6 +12,7 @@ packages/*/out/
 engine/build/
 packages/desktop/src-tauri/target/
 packages/desktop/src-tauri/gen/
+packages/desktop/src-tauri/sidecars/
 
 # Logs
 *.log

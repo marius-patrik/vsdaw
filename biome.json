@@ -39,6 +39,7 @@
       "archive/**",
       "packages/desktop/src-tauri/target",
       "packages/desktop/src-tauri/gen",
+      "engine/build",
       "bun.lock",
       "bun.lockb"
     ]

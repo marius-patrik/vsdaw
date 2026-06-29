@@ -73,3 +73,8 @@
   --sg-font-lg: 0.875rem;
   --sg-font-xl: 1rem;
 }
+
+html {
+  background-color: var(--sg-background);
+  color: var(--sg-foreground);
+}

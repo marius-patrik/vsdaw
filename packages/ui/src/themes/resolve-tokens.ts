@@ -9,12 +9,17 @@ export interface ResolveOptions {
 
 export function resolveAppTokens(theme: VsCodeTheme, options?: ResolveOptions): AppColorTokens {
   const colors = theme.colors;
+  const onFallback =
+    options?.onFallback ??
+    ((token: keyof AppColorTokens, fallback: string) => {
+      console.warn(`[theme] Falling back for "${token}" to "${fallback}"`);
+    });
   const pick = (keys: string[], fallback: string, token: keyof AppColorTokens): string => {
     for (const key of keys) {
       const value = colors[key];
       if (typeof value === "string" && value.startsWith("#")) return value;
     }
-    options?.onFallback?.(token, fallback);
+    onFallback(token, fallback);
     return fallback;
   };
   const result = {} as AppColorTokens;

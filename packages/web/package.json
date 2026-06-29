@@ -6,7 +6,9 @@
   "scripts": {
     "build": "rsbuild build",
     "dev": "rsbuild dev",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@singularity/shared": "workspace:*",
@@ -19,6 +21,7 @@
     "@rsbuild/plugin-react": "^1.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@playwright/test": "^1.45.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",

@@ -23,7 +23,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type="button"
       disabled={disabled || loading}
       className={clsx(
-        "inline-flex items-center justify-center px-2.5 font-sg-base text-sg-text-primary",
+        "inline-flex items-center justify-center px-2.5 text-sg-font-base text-sg-text-primary",
         "rounded-md border border-sg-border transition-colors",
         size === "md" ? "h-sg-size-button-height" : "h-sg-size-button-small-height",
         variant === "primary" && "bg-sg-accent text-sg-accent-fg hover:bg-sg-accent-hover",

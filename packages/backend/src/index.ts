@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import websocket from "@fastify/websocket";
 import type { WebSocket } from "@fastify/websocket";
@@ -23,6 +24,7 @@ export interface BuildServerResult {
 
 export async function buildServer(options: ServerOptions = {}): Promise<BuildServerResult> {
   const app = Fastify({ logger: false });
+  await app.register(cors, { origin: true, credentials: true });
   await app.register(multipart);
   await app.register(websocket);
 
@@ -85,4 +87,8 @@ export async function startServer(options: ServerOptions = {}) {
   const host = options.host ?? "127.0.0.1";
   await app.listen({ port, host });
   return { app, port, host, store, broadcast };
+}
+
+if (import.meta.main) {
+  void startServer({ dataDir: process.env.SINGULARITY_DATA_DIR });
 }

@@ -1,0 +1,20 @@
+.sg-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--sg-space-2);
+}
+
+.sg-slider-vertical {
+  flex-direction: column;
+}
+
+.sg-slider-input {
+  accent-color: var(--sg-accent);
+}
+
+.sg-slider-input-vertical {
+  height: 6rem;
+  writing-mode: bt-lr;
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
+}

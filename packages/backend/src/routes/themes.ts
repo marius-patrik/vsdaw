@@ -1,5 +1,5 @@
 import { themeRecordSchema, vsCodeThemeSchema } from "@singularity/shared";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { ThemeStore } from "../themes/theme-store.js";
 import { slugify } from "../utils/slugify.js";
@@ -12,6 +12,10 @@ export const importThemeResponseSchema = themeRecordSchema;
 
 export const getThemeResponseSchema = vsCodeThemeSchema;
 
+const importThemeQuerySchema = z.object({
+  activate: z.enum(["true", "false"]).optional().default("false"),
+});
+
 export async function themesRoutes(
   app: FastifyInstance,
   store: ThemeStore,
@@ -22,26 +26,33 @@ export async function themesRoutes(
     return reply.send({ themes });
   });
 
-  app.post("/themes/import", async (request, reply) => {
-    const data = await request.file();
-    if (!data) {
-      return reply.status(400).send({ error: "Missing theme file" });
-    }
-    const text = await data.toBuffer().then((buf) => buf.toString("utf-8"));
-    let theme: z.infer<typeof vsCodeThemeSchema>;
-    try {
-      theme = vsCodeThemeSchema.parse(JSON.parse(text));
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "Invalid VS Code theme", details: err.errors });
+  app.post(
+    "/themes/import",
+    async (request: FastifyRequest<{ Querystring: { activate?: string } }>, reply) => {
+      const query = importThemeQuerySchema.safeParse(request.query);
+      const activate = query.success ? query.data.activate === "true" : false;
+      const data = await request.file();
+      if (!data) {
+        return reply.status(400).send({ error: "Missing theme file" });
       }
-      return reply.status(400).send({ error: "Invalid JSON" });
-    }
-    const id = slugify(theme.name);
-    const record = await store.importTheme(id, theme);
-    broadcast({ type: "theme.changed", payload: theme });
-    return reply.status(201).send(record);
-  });
+      const text = await data.toBuffer().then((buf) => buf.toString("utf-8"));
+      let theme: z.infer<typeof vsCodeThemeSchema>;
+      try {
+        theme = vsCodeThemeSchema.parse(JSON.parse(text));
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.status(400).send({ error: "Invalid VS Code theme", details: err.errors });
+        }
+        return reply.status(400).send({ error: "Invalid JSON" });
+      }
+      const id = slugify(theme.name);
+      const record = await store.importTheme(id, theme);
+      if (activate) {
+        broadcast({ type: "theme.changed", payload: theme });
+      }
+      return reply.status(201).send(record);
+    },
+  );
 
   app.get("/themes/:id", async (request, reply) => {
     const { id } = request.params as { id: string };

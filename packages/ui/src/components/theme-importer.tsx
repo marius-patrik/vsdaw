@@ -1,12 +1,10 @@
-import type { ThemeRecord } from "@singularity/shared";
+import { vsCodeThemeSchema } from "@singularity/shared";
 import { useRef, useState } from "react";
 import { Button } from "./primitives/button.js";
+import { useTheme } from "./theme-provider.js";
 
-export interface ThemeImporterProps {
-  onImported: (record: ThemeRecord) => void;
-}
-
-export function ThemeImporter({ onImported }: ThemeImporterProps): React.ReactElement {
+export function ThemeImporter(): React.ReactElement {
+  const { importTheme } = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,29 +18,9 @@ export function ThemeImporter({ onImported }: ThemeImporterProps): React.ReactEl
     setError(null);
     try {
       const text = await file.text();
-      const json = JSON.parse(text) as unknown;
-      // Basic validation: must have name, type, colors.
-      if (
-        typeof json !== "object" ||
-        json === null ||
-        !("name" in json) ||
-        !("type" in json) ||
-        !("colors" in json)
-      ) {
-        throw new Error("Invalid VS Code theme file");
-      }
-      const themeJson = json as { name: string; type: ThemeRecord["type"] };
-      const slug = themeJson.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-      const record: ThemeRecord = {
-        id: slug,
-        name: themeJson.name,
-        type: json.type as ThemeRecord["type"],
-        source: "user",
-      };
-      onImported(record);
+      const parsed = JSON.parse(text) as unknown;
+      vsCodeThemeSchema.parse(parsed);
+      await importTheme(file);
       event.target.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import theme");
@@ -56,7 +34,8 @@ export function ThemeImporter({ onImported }: ThemeImporterProps): React.ReactEl
         type="file"
         accept=".json,application/json"
         onChange={handleChange}
-        className="hidden"
+        className="sr-only"
+        data-testid="theme-file-input"
       />
       <Button onClick={handleClick} variant="ghost">
         Import theme…

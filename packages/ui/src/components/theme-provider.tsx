@@ -16,7 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { BUILT_IN_THEMES, BUILT_IN_THEME_LIST } from "../themes/built-in/index.js";
+import { BUILT_IN_THEMES, BUILT_IN_THEME_RECORDS } from "../themes/built-in/index.js";
 import {
   appTokensToCssVariables,
   slugifyThemeId,
@@ -46,15 +46,12 @@ export interface ThemeProviderProps {
   baseUrl?: string;
 }
 
+const DEFAULT_BASE_URL = "http://localhost:3001";
+
 const DEFAULT_SETTINGS: ThemeSettings = {
   activeThemeId: "dark-plus",
   uiScale: "100",
-  themes: BUILT_IN_THEME_LIST.map((theme) => ({
-    id: slugifyThemeId(theme.name),
-    name: theme.name,
-    type: theme.type as VsCodeTheme["type"],
-    source: "built-in" as const,
-  })),
+  themes: BUILT_IN_THEME_RECORDS,
 };
 
 function applyTokensToRoot(tokens: AppTokens): void {
@@ -80,7 +77,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function ThemeProvider({ children, baseUrl = "" }: ThemeProviderProps): React.ReactElement {
+export function ThemeProvider({
+  children,
+  baseUrl = DEFAULT_BASE_URL,
+}: ThemeProviderProps): React.ReactElement {
   const monaco = useMonaco();
   const [settings, setSettings] = useState<ThemeSettings>(DEFAULT_SETTINGS);
   const [activeTheme, setActiveTheme] = useState<VsCodeTheme>(
@@ -140,11 +140,15 @@ export function ThemeProvider({ children, baseUrl = "" }: ThemeProviderProps): R
 
   const setTheme = useCallback(
     async (themeId: string) => {
-      await fetchJson(`${baseUrl}/api/v1/settings/theme`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ activeThemeId: themeId }),
-      });
+      try {
+        await fetchJson(`${baseUrl}/api/v1/settings/theme`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ activeThemeId: themeId }),
+        });
+      } catch {
+        // Fall through to local update when backend is unavailable.
+      }
       const record = settings.themes.find((t) => t.id === themeId);
       if (record) {
         const theme = await resolveTheme(record, baseUrl);
@@ -157,11 +161,15 @@ export function ThemeProvider({ children, baseUrl = "" }: ThemeProviderProps): R
 
   const setUiScale = useCallback(
     async (scale: UiScale) => {
-      await fetchJson(`${baseUrl}/api/v1/settings/theme`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ uiScale: scale }),
-      });
+      try {
+        await fetchJson(`${baseUrl}/api/v1/settings/theme`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ uiScale: scale }),
+        });
+      } catch {
+        // Fall through to local update when backend is unavailable.
+      }
       setSettings((prev) => ({ ...prev, uiScale: scale }));
     },
     [baseUrl],
@@ -174,7 +182,7 @@ export function ThemeProvider({ children, baseUrl = "" }: ThemeProviderProps): R
       const theme = vsCodeThemeSchema.parse(parsed);
       const body = new FormData();
       body.append("file", new Blob([text], { type: "application/json" }), file.name);
-      const record = await fetchJson<ThemeRecord>(`${baseUrl}/api/v1/themes/import`, {
+      const record = await fetchJson<ThemeRecord>(`${baseUrl}/api/v1/themes/import?activate=true`, {
         method: "POST",
         body,
       });
@@ -207,7 +215,7 @@ export function useTheme(): ThemeContextValue {
 
 async function resolveTheme(record: ThemeRecord, baseUrl: string): Promise<VsCodeTheme> {
   if (record.source === "built-in") {
-    const builtIn = BUILT_IN_THEME_LIST.find((t) => slugifyThemeId(t.name) === record.id);
+    const builtIn = BUILT_IN_THEME_RECORDS.find((t) => t.id === record.id)?.theme;
     if (builtIn) return builtIn as VsCodeTheme;
   }
   const data = await fetchJson<unknown>(`${baseUrl}/api/v1/themes/${record.id}`);

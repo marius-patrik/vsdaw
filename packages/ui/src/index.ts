@@ -21,5 +21,9 @@ export {
 } from "./themes/static-tokens.js";
 export { vsCodeThemeSchema, vsCodeThemeTypeSchema, parseVsCodeThemeJson } from "./themes/vscode.js";
 export type { VsCodeTheme, VsCodeThemeType } from "./themes/vscode.js";
-export { BUILT_IN_THEMES, BUILT_IN_THEME_LIST } from "./themes/built-in/index.js";
+export {
+  BUILT_IN_THEME_RECORDS,
+  BUILT_IN_THEMES,
+  BUILT_IN_THEME_LIST,
+} from "./themes/built-in/index.js";
 export { tailwindPreset } from "../tailwind.preset.js";

@@ -7,6 +7,12 @@ out/
 dist/
 *.vsix
 coverage/
+packages/*/dist/
+packages/*/out/
+engine/build/
+packages/desktop/src-tauri/target/
+packages/desktop/src-tauri/gen/
+packages/desktop/src-tauri/sidecars/
 
 # Logs
 *.log
@@ -22,8 +28,7 @@ Thumbs.db
 .env
 .env.local
 
-# Bun
-bun.lock
-bun.lockb
-node_modules/
+# Reviews
+# TypeScript build info
+*.tsbuildinfo
 reviews/

@@ -32,6 +32,17 @@
     "lineWidth": 100
   },
   "files": {
-    "ignore": ["node_modules", "out", "dist", ".vscode-test", "coverage", "*.vsix", "bun.lock"]
+    "ignore": [
+      "**/node_modules",
+      "**/out",
+      "**/dist",
+      "archive/**",
+      "packages/desktop/src-tauri/target",
+      "packages/desktop/src-tauri/gen",
+      "engine/build",
+      "engine/third_party",
+      "bun.lock",
+      "bun.lockb"
+    ]
   }
 }

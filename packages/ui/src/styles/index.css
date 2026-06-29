@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sg-background: #1e1e1e;
+  --sg-foreground: #d4d4d4;
+  --sg-panel-background: #252526;
+  --sg-panel-foreground: #cccccc;
+  --sg-panel-border: #3c3c3c;
+  --sg-surface-1: #37373d;
+  --sg-surface-2: #3c3c3c;
+  --sg-surface-3: #3c3c3c;
+  --sg-border: #3c3c3c;
+  --sg-border-subtle: #2a2d2e;
+  --sg-border-focus: #007fd4;
+  --sg-accent: #0e639c;
+  --sg-accent-foreground: #ffffff;
+  --sg-accent-hover: #1177bb;
+  --sg-danger: #f48771;
+  --sg-warning: #cca700;
+  --sg-success: #89d185;
+  --sg-info: #75beff;
+  --sg-text-primary: #cccccc;
+  --sg-text-secondary: #9cdcfe;
+  --sg-text-disabled: #808080;
+  --sg-meter-green: #89d185;
+  --sg-meter-yellow: #cca700;
+  --sg-meter-red: #f48771;
+  --sg-playhead: #007fd4;
+  --sg-selection: #264f78;
+  --sg-loop-region: #514f38;
+  --sg-grid-line: #2a2d2e;
+  --sg-grid-line-sub: #2a2d2e;
+  --sg-grid-line-bar: #3c3c3c;
+
+  --sg-space-0: 0;
+  --sg-space-px: 1px;
+  --sg-space-0-5: 0.125rem;
+  --sg-space-1: 0.25rem;
+  --sg-space-2: 0.5rem;
+  --sg-space-3: 0.75rem;
+  --sg-space-4: 1rem;
+  --sg-space-5: 1.25rem;
+  --sg-space-6: 1.5rem;
+  --sg-space-8: 2rem;
+  --sg-space-10: 2.5rem;
+  --sg-space-12: 3rem;
+
+  --sg-size-toolbar-height: 2.75rem;
+  --sg-size-panel-header-height: 2rem;
+  --sg-size-channel-rack-strip-height: 5rem;
+  --sg-size-mixer-strip-width: 5rem;
+  --sg-size-fader-width: 1.5rem;
+  --sg-size-button-height: 1.75rem;
+  --sg-size-button-small-height: 1.375rem;
+  --sg-size-input-height: 1.75rem;
+  --sg-size-ruler-height: 1.5rem;
+
+  --sg-radius-sm: 0.1875rem;
+  --sg-radius-md: 0.25rem;
+  --sg-radius-lg: 0.375rem;
+  --sg-radius-full: 9999px;
+
+  --sg-shadow-none: none;
+  --sg-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --sg-shadow-md: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+
+  --sg-font-xs: 0.625rem;
+  --sg-font-sm: 0.6875rem;
+  --sg-font-base: 0.75rem;
+  --sg-font-md: 0.8125rem;
+  --sg-font-lg: 0.875rem;
+  --sg-font-xl: 1rem;
+}

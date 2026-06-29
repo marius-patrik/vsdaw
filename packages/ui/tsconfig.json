@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["bun", "node", "jest", "react", "react-dom"]
+  },
+  "include": ["src/**/*", "tailwind.preset.ts"]
+}

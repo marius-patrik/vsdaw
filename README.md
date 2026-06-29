@@ -1,78 +1,33 @@
-# VSDAW
+# Singularity
 
-OpenDAW-powered digital audio workstation inside Visual Studio Code.
+A full-featured digital audio workstation and creative IDE.
 
-> **License:** AGPL-3.0-or-later  
-> VSDAW is built on top of the [OpenDAW](https://github.com/andremichelle/openDAW) SDK, which is licensed under AGPL-3.0-or-later.
+> **License:** AGPL-3.0-or-later
+
+Singularity is a standalone DAW built for FL Studio / OpenDAW Studio parity, with integrated AI agents, a code editor, terminal, and browser tabs.
 
 ## Features
 
-- First-class VS Code tabs: Timeline, Mixer, Piano Roll, Browser, and Graph.
-- Custom `.vsdaw` project files stored as OpenDAW-compatible ZIP bundles.
-- Audio and MIDI recording with multi-take support.
-- OpenDAW stock devices for effects and instruments.
-- Offline export to WAV, FLAC, and OGG.
-- Native VS Code theming and keyboard shortcuts.
-
-## Pinned OpenDAW SDK versions
-
-This release pins the following OpenDAW packages:
-
-- `@opendaw/studio-sdk@0.0.155`
-- `@opendaw/studio-core@0.0.153`
+- Standalone desktop app (Tauri) and web app sharing the same React UI.
+- JUCE-based native audio engine hosting VST3, AU, CLAP, LV2, and AAX plugins.
+- FL Studio-style workflow: Channel Rack, Piano Roll, Playlist, Mixer, Browser, and Patcher-style routing graph.
+- Stock open-source instruments and effects: sampler, subtractive synth, drum machine, SoundFont player, and built-in effects.
+- Edison-style audio recording and editing.
+- Full MIDI support, MIDI learn, and typing keyboard to piano.
+- `.singularity` project bundles containing audio, video, images, code, plugin states, and agent sessions.
+- AI agent integration with generic skill format, CLI, MCP server, terminal, browser, and Monaco IDE tabs.
+- VS Code theme-based app theming.
+- macOS, Linux, and web app hard targets; Windows opportunistic.
 
 ## Development
 
-VSDAW is developed with [Bun](https://bun.sh/). Make sure Bun is installed, then run:
+Singularity is developed with [Bun](https://bun.sh/). Make sure Bun is installed, then run:
 
 ```bash
 bun install
 bun run build
 bun run test
-bun run package
 ```
-
-### Available scripts
-
-| Script | Purpose |
-|---|---|
-| `bun run build` | Build engine, extension host, and React view bundles. |
-| `bun run build:engine` | Bundle the hidden engine webview and copy OpenDAW workers. |
-| `bun run build:extension` | Bundle the VS Code extension host and local Bun server. |
-| `bun run build:views` | Bundle React view tabs and generate Tailwind CSS. |
-| `bun run test` | Run Jest unit tests. |
-| `bun run test:integration` | Run VS Code integration tests (`vscode-test`). |
-| `bun run test:smoke` | Run smoke tests. |
-| `bun run lint` | Run Biome linter/formatter checks. |
-| `bun run lint:fix` | Auto-fix Biome issues. |
-| `bun run format` | Format code with Biome. |
-| `bun run typecheck` | Run TypeScript with `--noEmit`. |
-| `bun run package` | Build and package the extension as a `.vsix`. |
-| `bun run version` | Bump version and changelog with `standard-version`. |
-
-### Local install verification
-
-After `bun run package`:
-
-```bash
-code --install-extension vsdaw-<version>.vsix
-```
-
-Open VS Code, run **VSDAW: Open Project**, and verify the engine boots with `crossOriginIsolated === true`.
-
-To uninstall:
-
-```bash
-code --uninstall-extension marius-patrik.vsdaw
-```
-
-## Usage
-
-See [docs/USAGE.md](./docs/USAGE.md) for a complete usage guide.
-
-## Third-party notices
-
-See [ThirdPartyNotices.txt](./ThirdPartyNotices.txt) for upstream license notices.
 
 ## Contributing
 

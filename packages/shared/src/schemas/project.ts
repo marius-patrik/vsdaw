@@ -1,39 +1,18 @@
 import { z } from "zod";
 import { MAX_BPM, MIN_BPM, PPQN, PROTOCOL_VERSION } from "../constants.js";
+import { AssetRefSchema } from "./asset.js";
+import { AutomationClipSchema } from "./automation.js";
 import { EntityIdSchema } from "./base.js";
-
-export const TimeSignatureSchema = z.object({
-  numerator: z.number().int().min(1).max(64),
-  denominator: z
-    .number()
-    .int()
-    .min(1)
-    .max(64)
-    .refine((v) => Number.isInteger(Math.log2(v)), {
-      message: "time-signature denominator must be a power of two",
-    }),
-});
+import { ChannelRackSchema } from "./channel.js";
+import { MixerSchema } from "./mixer.js";
+import { PatternSchema } from "./pattern.js";
+import { PlaylistSchema } from "./playlist.js";
+import { RoutingGraphSchema } from "./routing.js";
+import { TimeSignatureSchema } from "./time.js";
 
 export const ProjectSettingsSchema = z.object({
   audioBufferSize: z.number().int().min(16).max(8192).default(512),
   defaultTemplateId: EntityIdSchema.optional(),
-});
-
-export const ChannelRackSchema = z.object({
-  channels: z.array(z.unknown()),
-});
-
-export const PlaylistSchema = z.object({
-  tracks: z.array(z.unknown()),
-});
-
-export const MixerSchema = z.object({
-  inserts: z.array(z.unknown()),
-});
-
-export const RoutingGraphSchema = z.object({
-  nodes: z.array(z.unknown()),
-  edges: z.array(z.unknown()),
 });
 
 export const ProjectSchema = z
@@ -44,17 +23,17 @@ export const ProjectSchema = z
     createdAt: z.string().datetime(),
     modifiedAt: z.string().datetime(),
     bpm: z.number().min(MIN_BPM).max(MAX_BPM).default(120),
-    timeSignature: TimeSignatureSchema,
+    timeSignature: TimeSignatureSchema.default({ numerator: 4, denominator: 4 }),
     sampleRate: z
       .union([z.literal(44100), z.literal(48000), z.literal(88200), z.literal(96000)])
       .default(48000),
-    settings: ProjectSettingsSchema,
     channelRack: ChannelRackSchema,
-    patterns: z.array(z.unknown()),
+    patterns: z.array(PatternSchema),
     playlist: PlaylistSchema,
     mixer: MixerSchema,
     routing: RoutingGraphSchema,
-    automationClips: z.array(z.unknown()),
-    assets: z.array(z.unknown()),
+    automationClips: z.array(AutomationClipSchema).default([]),
+    assets: z.array(AssetRefSchema).default([]),
+    settings: ProjectSettingsSchema.default({}),
   })
   .strict();

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PROTOCOL_VERSION } from "../constants.js";
 import { EntityIdSchema } from "./base.js";
 
 export const ErrorCodeSchema = z.enum([
@@ -22,7 +23,7 @@ export const MessageSchema = z
   .object({
     id: EntityIdSchema,
     type: z.string().min(1).max(128),
-    payload: z.unknown(),
+    payload: z.unknown().refine((v) => v !== undefined, { message: "payload is required" }),
   })
   .passthrough();
 
@@ -42,7 +43,7 @@ export const EventSchema = z
     id: EntityIdSchema,
     type: z.literal("event"),
     topic: z.string().min(1).max(256),
-    payload: z.unknown(),
+    payload: z.unknown().refine((v) => v !== undefined, { message: "payload is required" }),
   })
   .passthrough();
 
@@ -50,6 +51,11 @@ export const EngineMessageSchema = z
   .object({
     id: EntityIdSchema,
     type: z.string().min(1).max(128),
-    payload: z.unknown(),
+    payload: z.unknown().refine((v) => v !== undefined, { message: "payload is required" }),
   })
   .strict();
+
+export const HealthResponseSchema = z.object({
+  status: z.literal("ok"),
+  protocolVersion: z.literal(PROTOCOL_VERSION),
+});

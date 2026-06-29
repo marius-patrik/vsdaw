@@ -5,3 +5,4 @@ export const PPQN = 960 as const;
 export const MIN_BPM = 1 as const;
 export const MAX_BPM = 999 as const;
 export const ENTITY_ID_MAX_LEN = 64;
+export const SUPPORTED_SAMPLE_RATES = [44100, 48000, 88200, 96000] as const;
